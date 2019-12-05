@@ -106,7 +106,25 @@ inputs = [
 ]
 
 
-def get_mass(i):
+def get_fuel_mass(i):
     return math.floor(i / 3) - 2
 
-print(sum([get_mass(i) for i in inputs]))
+
+def get_mass_inc_fuel(i):
+    buff = 0
+    elem = i
+    while True:
+        f = get_fuel_mass(elem)
+        # print(f)
+        if f <= 0:
+            break
+        else:
+            buff += f
+            elem = f
+    return buff
+
+
+print("Part one:")
+print(sum([get_fuel_mass(i) for i in inputs]))
+print("Part two:")
+print(sum([get_mass_inc_fuel(i) for i in inputs]))
