@@ -10,9 +10,9 @@
 # coordinates are up is +y and r is +x.
 
 class LineSeg(object):
-    __slots__ = ['x', 'y', 'l', 'd']
+    __slots__ = ['x', 'y', 'l', 'd', 'cd']
 
-    def __init__(self, x, y, l, d):
+    def __init__(self, x, y, l, d, cd):
         self.x = x
         self.y = y
         self.l = l
@@ -20,6 +20,9 @@ class LineSeg(object):
         if d not in ('u', 'd', 'l', 'r'):
             raise ValueError("Unexpected direction {0}".format(d))
         self.d = d
+        # cd is the cumulative distance to the *start* of this
+        # segment.
+        self.cd = cd
 
     def get_end(self):
         if self.d == 'u':
@@ -54,12 +57,14 @@ class LineSeg(object):
     def from_raw(cls, raw_code, last_seg=None):
         if last_seg:
             start = last_seg.get_end()
+            cd = last_seg.cd + last_seg.l
         else:
             start = (0, 0)
+            cd = 0
 
         raw_d = raw_code[0]
         raw_l = int(raw_code[1:])
-        return cls(start[0], start[1], raw_l, raw_d.lower())
+        return cls(start[0], start[1], raw_l, raw_d.lower(), cd)
 
     def __str__(self):
         return "<LineSeg: {s!r} {d}:{l}>".format(
@@ -97,7 +102,7 @@ class LineSeg(object):
         """Does this line segment intersect the other.
 
         Returns:
-            Tuple of intersection or None if not.
+            Tuple of ((ix, iy), (cd1, cd2)) or None if not.
 
         """
 
@@ -111,13 +116,17 @@ class LineSeg(object):
             if self.is_between(self.start[0], other.start[0], other.end[0]):
                 # AND it means that for other the y is the same at the start and end
                 if self.is_between(other.start[1], self.start[1], self.end[1]):
-                    return (self.start[0], other.start[1])
+                    cd1 = self.cd + abs(other.start[1] - self.start[1])
+                    cd2 = other.cd + abs(other.start[0] - self.start[0])
+                    return ((self.start[0], other.start[1]), (cd1, cd2))
         elif self.orientation == 'h':
             # Ditto from above but the other way round.
             if self.is_between(self.start[1], other.start[1], other.end[1]):
                 # AND it means that for other the y is the same at the start and end
                 if self.is_between(other.start[0], self.start[0], self.end[0]):
-                    return (other.start[0], self.start[1])
+                    cd1 = self.cd + abs(other.start[0] - self.start[0])
+                    cd2 = other.cd + abs(other.start[1] - self.start[1])
+                    return ((other.start[0], self.start[1]), (cd1, cd2))
         return None
 
     @classmethod
@@ -135,17 +144,26 @@ class LineSeg(object):
     def best_manhattan_distance(intersection_list):
         """Returns the best manhattan distance from the list of tuples."""
         best = None
-        for x, y in intersection_list:
-            if x < 0:
-                x = -x
-            if y < 0:
-                y = -y
-            d = x + y
+        for (x, y), _ in intersection_list:
+            d = abs(x) + abs(y)
             if best:
                 if d < best:
                     best = d
             else:
                 best = d
+        return best
+
+    @staticmethod
+    def best_timing_distance(intersection_list):
+        """Returns the best timing distance from the list of tuples."""
+        best = None
+        for (x, y), (cd1, cd2) in intersection_list:
+            t = cd1 + cd2
+            if best:
+                if t < best:
+                    best = t
+            else:
+                best = t
         return best
 
 
@@ -154,7 +172,9 @@ def compare(l1, l2):
     print(ib)
     bd = LineSeg.best_manhattan_distance(ib)
     print(bd)
-    return bd
+    td = LineSeg.best_timing_distance(ib)
+    print(td)
+    return td
 
 # Example 1
 compare(
