@@ -25,32 +25,44 @@ def take_step(buff, idx=0):
     # p3_mode = (op_code % 100000) // 10000
 
     if instruction == 99:
-        adv = 1
-        return buff, idx + adv, True
-    elif instruction in (1, 2):
+        return buff, idx + 1, True
+    elif instruction in (1, 2, 7, 8):
         arg1 = get_from_buff(buff, buff[idx + 1], p1_mode)
         arg2 = get_from_buff(buff, buff[idx + 2], p2_mode)
-        adv = 4
         if instruction == 1:
             # add
-            buff[buff[idx + 3]] = arg1 + arg2
+            res = arg1 + arg2
         elif instruction == 2:
             # multiply
-            buff[buff[idx + 3]] = arg1 * arg2
+            res = arg1 * arg2
+        elif instruction == 7:
+            res = int(arg1 < arg2)
+        elif instruction == 8:
+            res = int(arg1 == arg2)
+        buff[buff[idx + 3]] = res
+        idx += 4
     elif instruction == 3:
         # Get input
         i = input('INPUT--> ')
         i = int(i)
         buff[buff[idx + 1]] = i
-        adv = 2
+        idx += 2
     elif instruction == 4:
         # Put Output
         arg1 = get_from_buff(buff, buff[idx + 1], p1_mode)
         print('OUTPUT--> {0}'.format(arg1))
-        adv = 2
+        idx += 2
+    elif instruction in (5, 6):
+        # Jump if true/false
+        arg1 = get_from_buff(buff, buff[idx + 1], p1_mode)
+        arg2 = get_from_buff(buff, buff[idx + 2], p2_mode)
+        if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):
+            idx = arg2
+        else:
+            idx += 3
     else:
         raise ValueError("Unexpected Opcode: {0}".format(instruction))
-    return buff, idx + adv, False
+    return buff, idx, False
 
 
 def iter_codes(buff):
