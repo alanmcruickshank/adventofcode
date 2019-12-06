@@ -37,10 +37,18 @@ def strictly_decreasing(n):
 
 def has_pair(n):
     l = make_intlist(n)
+    runs = []
+    runlen = 1
     for i in range(1, len(l)):
         if l[i] == l[i - 1]:
-            return True
-    return False
+            runlen += 1
+        else:
+            if runlen > 1:
+                runs.append(runlen)
+            runlen = 1
+    if runlen > 1:
+        runs.append(runlen)
+    return 2 in runs
 
 
 def generate_options(start, end):
@@ -55,7 +63,6 @@ def generate_options(start, end):
             i = n
         if i > end:
             break
-
 
 opts = list(generate_options(168630, 718098))
 print(len(opts))
