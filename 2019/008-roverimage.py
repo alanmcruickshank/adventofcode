@@ -45,5 +45,32 @@ def layer_stats(unstacked_image):
             idx_0 = idx + 1
     print("Lowest 0: {0}, row {1}".format(fewest_0, idx_0))
 
+def layer_image(unstacked_image):
+    image_buff = None
+    for layer in unstacked_image:
+        # The first layer is easy.
+        if image_buff is None:
+            image_buff = layer
+        else:
+            # Now we iterate through, and replace any transparent bits
+            # using the deeper layers.
+            for idx, row in enumerate(image_buff):
+                row_buff = list(row)
+                for c_idx, char in enumerate(row):
+                    if char == '2':
+                        row_buff[c_idx] = layer[idx][c_idx]
+                    else:
+                        # Keep it as is.
+                        pass
+                # Save the new row
+                image_buff[idx] = ''.join(row_buff)
+    # For good measure, let's print the image here:
+    for row in image_buff:
+        disp_row = row.replace('0', '_').replace('1', '#')
+        print(disp_row)
+    return image_buff
+
+
 i = unstack_image(real_image)
-layer_stats(i)
+# layer_stats(i)
+layer_image(i)
