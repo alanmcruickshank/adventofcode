@@ -75,6 +75,6 @@ class AsteroidField(object):
         return best
 
 
-m = AsteroidField.from_file('010-map-1.txt')
+m = AsteroidField.from_file('010-map-t.txt')
 
 print(m.assess())
