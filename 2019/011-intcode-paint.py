@@ -1,4 +1,7 @@
-"""Day 11 - Intcode Painting Robot."""
+"""Day 11 - Intcode Painting Robot.
+
+Not working. Can't get the right answer?
+"""
 
 
 class IntComp(object):
@@ -102,7 +105,11 @@ class IntComp(object):
         return None, output
 
     def run(self, input_buffer=None):
-        if not self.halt:
+        if self.halt:
+            raise RuntimeError("IntComp is in a halt state already!")
+        elif self.await_input and input_buffer is None:
+            return
+        else:
             while True:
                 input_buffer, output = self.take_step(input_buffer=input_buffer)
                 if output:
@@ -111,8 +118,6 @@ class IntComp(object):
                     break
                 if self.await_input:
                     return
-        else:
-            raise RuntimeError("IntComp is in a halt state already!")
 
 
 class HullGrid(object):
@@ -165,16 +170,18 @@ class HullPainterSim(object):
         next_out_paint = True
         while True:
             r = self.comp.run(input_buffer=input_buffer)
+            input_buffer = None
             if r is not None:
-                print("> Output! Loc is {0!r}, output is {1}, next_out_paint: {2}".format(self.pos, r, next_out_paint))
+                # print("Out: {0!r}".format(r))
+                # print("> Output! Loc is {0!r}, output is {1}, next_out_paint: {2}".format(self.pos, r, next_out_paint))
                 # Got an output. What are we waiting for?
                 if next_out_paint:
-                    print(">> Setting hull to {0}".format(r))
+                    # print(">> Setting hull to {0}".format(r))
                     self.hull.set_colour(self.pos[0], self.pos[1], r)
                     # Expect direction next: next_out_paint
                     next_out_paint = False
                 else:
-                    prev_dir = self.dir
+                    # prev_dir = self.dir
                     # Turn
                     if r == 1:
                         self.dir += 1
@@ -191,18 +198,20 @@ class HullPainterSim(object):
                     else:
                         # We're pointing left/right
                         self.pos = (self.pos[0] - (self.dir - 2), self.pos[1])
-                    print(">> Moved! Loc is now {0!r}".format(self.pos))
+                    # print(">> Moved! Loc is now {0!r}".format(self.pos))
                     # Expect colour next: next_out_paint
                     next_out_paint = True
             if self.comp.halt:
                 print("> Halt!: Ever painted: {0}".format(self.hull.num_painted()))
+                print("> Halt!: Ever painted: {0!r}".format(self.hull._ever_painted))
                 break
             if self.comp.await_input:
-                print("> Await Input! Loc is {0!r}, Dir is {1}".format(self.pos, self.dir))
+                # print("> Await Input! Loc is {0!r}, Dir is {1}".format(self.pos, self.dir))
                 hull_col = self.hull.get_colour(*self.pos)
-                print(">> Hull colour is {0}. Inputting".format(hull_col))
+                # print(">> Hull colour is {0}. Inputting".format(hull_col))
                 # input_buffer = input('INPUT-->')
                 input_buffer = hull_col
+                # print("Input: {0}".format(input_buffer))
 
 
 r = HullPainterSim()
