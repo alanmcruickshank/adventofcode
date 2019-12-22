@@ -115,7 +115,6 @@ class IntComp(object):
             raise RuntimeError("IntComp is in a halt state already!")
 
 
-
 class HullGrid(object):
     """A theoretical infinite hull grid."""
     def __init__(self):
@@ -170,15 +169,21 @@ class HullPainterSim(object):
                 print("> Output! Loc is {0!r}, output is {1}, next_out_paint: {2}".format(self.pos, r, next_out_paint))
                 # Got an output. What are we waiting for?
                 if next_out_paint:
-                    print(">> Setting hull to {1}".format(self.pos, r))
+                    print(">> Setting hull to {0}".format(r))
                     self.hull.set_colour(self.pos[0], self.pos[1], r)
                     # Expect direction next: next_out_paint
                     next_out_paint = False
                 else:
-                    print(">> Advancing dir by {1}".format(self.pos, r))
+                    prev_dir = self.dir
                     # Turn
-                    self.dir += r
+                    if r == 1:
+                        self.dir += 1
+                    elif r == 0:
+                        self.dir -= 1
+                    else:
+                        raise ValueError("Unexpected direction output: {0}".format(self.dir))
                     self.dir %= 4
+                    # print(">> Turning from {0} to {1}".format(prev_dir, self.dir))
                     # Move
                     if self.dir % 2 == 0:
                         # We're pointing up/down
@@ -196,7 +201,7 @@ class HullPainterSim(object):
                 print("> Await Input! Loc is {0!r}, Dir is {1}".format(self.pos, self.dir))
                 hull_col = self.hull.get_colour(*self.pos)
                 print(">> Hull colour is {0}. Inputting".format(hull_col))
-                #input_buffer = input('INPUT-->')
+                # input_buffer = input('INPUT-->')
                 input_buffer = hull_col
 
 
