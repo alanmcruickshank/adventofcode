@@ -1,5 +1,6 @@
 """Day 6 orbital maps."""
 
+
 def read_map(fname):
     buff = []
     with open(fname, 'r') as f:
@@ -8,11 +9,13 @@ def read_map(fname):
             buff.append((a, b))
     return buff
 
+
 def direct_orbits(buff):
     dmap = {}
     for a, b in buff:
         dmap[b] = a
     return dmap
+
 
 def count_orbits(m):
     keys = list(m.keys())
@@ -29,6 +32,7 @@ def count_orbits(m):
         orbs[k] = o
     return orbs
 
+
 # We want an inverted tree not a normal one
 
 r = read_map('006-map-2.txt')
@@ -40,9 +44,11 @@ c = count_orbits(m)
 s = sum([c[k] for k in c])
 print(s)
 
-### Part 2 - orbital transfers
+# ## Part 2 - orbital transfers
 
-# to get to santa, we need to work out the common parent, then go up to that and then down to santa.
+# to get to santa, we need to work out the common
+# parent, then go up to that and then down to santa.
+
 
 def path_to_com(m, e):
     """returns a list of stops on the way from e to com."""
@@ -55,6 +61,7 @@ def path_to_com(m, e):
             i = m[i]
             buff.append(i)
     return buff
+
 
 def common_parent_hops(m, e1, e2):
     p1 = path_to_com(m, e1)

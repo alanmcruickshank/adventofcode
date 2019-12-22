@@ -15,11 +15,12 @@ def make_intlist(n):
 def strictly_decreasing(n):
     """return (True, N) if strictly decreasing, return (False, N)
     if not, where N is the next number that IS strictly decreasing."""
-    l = make_intlist(n)
-    # We'll build up the number in this buffer a digit at a time, by x10 each time
+    ln = make_intlist(n)
+    # We'll build up the number in this buffer a digit at a
+    # time, by x10 each time
     b = 0
     success = True
-    for d in l:
+    for d in ln:
         if b:
             # Compare the digit to the last digit of the buffer
             if d >= b % 10:
@@ -27,20 +28,22 @@ def strictly_decreasing(n):
             else:
                 # We decreased
                 success = False
-                # The next best thing is to add the same number as the previous digit
+                # The next best thing is to add the same number as
+                # the previous digit
                 b = (b % 10) + (b * 10)
         else:
-            # In the first time round, we just set the buffer to the first digit
+            # In the first time round, we just set the buffer to
+            # the first digit
             b = d
     return (success, b)
 
 
 def has_pair(n):
-    l = make_intlist(n)
+    ln = make_intlist(n)
     runs = []
     runlen = 1
-    for i in range(1, len(l)):
-        if l[i] == l[i - 1]:
+    for i in range(1, len(ln)):
+        if ln[i] == ln[i - 1]:
             runlen += 1
         else:
             if runlen > 1:
@@ -63,6 +66,7 @@ def generate_options(start, end):
             i = n
         if i > end:
             break
+
 
 opts = list(generate_options(168630, 718098))
 print(len(opts))

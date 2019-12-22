@@ -62,7 +62,7 @@ def take_step(buff, idx=0, input_buffer=None):
         # Jump if true/false
         arg1 = get_from_buff(buff, buff[idx + 1], p1_mode)
         arg2 = get_from_buff(buff, buff[idx + 2], p2_mode)
-        if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):
+        if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):  # noqa
             idx = arg2
         else:
             idx += 3
@@ -72,7 +72,8 @@ def take_step(buff, idx=0, input_buffer=None):
 
 
 class Amp(object):
-    amp_code = [3,8,1001,8,10,8,105,1,0,0,21,34,47,72,93,110,191,272,353,434,99999,3,9,102,3,9,9,1001,9,3,9,4,9,99,3,9,102,4,9,9,1001,9,4,9,4,9,99,3,9,101,3,9,9,1002,9,3,9,1001,9,2,9,1002,9,2,9,101,4,9,9,4,9,99,3,9,1002,9,3,9,101,5,9,9,102,4,9,9,1001,9,4,9,4,9,99,3,9,101,3,9,9,102,4,9,9,1001,9,3,9,4,9,99,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,2,9,9,4,9,99,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,102,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,99,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,101,1,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,2,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,99]
+    amp_code = [3,8,1001,8,10,8,105,1,0,0,21,34,47,72,93,110,191,272,353,434,99999,3,9,102,3,9,9,1001,9,3,9,4,9,99,3,9,102,4,9,9,1001,9,4,9,4,9,99,3,9,101,3,9,9,1002,9,3,9,1001,9,2,9,1002,9,2,9,101,4,9,9,4,9,99,3,9,1002,9,3,9,101,5,9,9,102,4,9,9,1001,9,4,9,4,9,99,3,9,101,3,9,9,102,4,9,9,1001,9,3,9,4,9,99,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,1,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,2,9,9,4,9,99,3,9,1001,9,1,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,1001,9,1,9,4,9,3,9,102,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1001,9,2,9,4,9,99,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,101,2,9,9,4,9,3,9,1002,9,2,9,4,9,3,9,1001,9,2,9,4,9,3,9,102,2,9,9,4,9,3,9,1002,9,2,9,4,9,99,3,9,101,1,9,9,4,9,3,9,101,1,9,9,4,9,3,9,101,2,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,2,9,4,9,3,9,101,1,9,9,4,9,3,9,102,2,9,9,4,9,3,9,1001,9,1,9,4,9,3,9,101,1,9,9,4,9,3,9,1002,9,2,9,4,9,99]  # noqa
+
     def __init__(self, code=None):
         self.code = code or self.amp_code
         self.halt = False
@@ -82,8 +83,12 @@ class Amp(object):
     def run(self, input_buffer=None):
         if not self.halt:
             while True:
-                self.code, self.prog_pointer, self.halt, input_buffer, output, self.await_input = take_step(
-                    self.code, idx=self.prog_pointer, input_buffer=input_buffer)
+                (
+                    self.code, self.prog_pointer, self.halt, input_buffer,
+                    output, self.await_input
+                ) = take_step(
+                    self.code, idx=self.prog_pointer, input_buffer=input_buffer
+                )
                 if output:
                     return output
                 if self.halt:
@@ -92,19 +97,6 @@ class Amp(object):
                     return
         else:
             raise RuntimeError("Amp is in a halt state already!")
-
-#def amplifier(phase, in_signal):
-#    return iter_codes(amp_code, input_buff=[phase, in_signal])[0]
-
-#def try_comb(phaselist):
-#    sig = 0
-#    o = []
-#    for p in phaselist:
-#        sig = amplifier(p, sig)
-#    return sig
-
-# print(try_comb([0,1,2,3,4]))
-
 
 
 def init_bank(amp_bank, phase_list):
@@ -137,7 +129,7 @@ def feedback_run(phase_list):
                 if amp_bank[a_idx].halt:
                     print("HALT! sig: {0}".format(sig))
                     halt = True
-                    break 
+                    break
                 out = amp_bank[a_idx].run(input_buffer=sig)
                 if out is not None:
                     sig = out
@@ -153,16 +145,17 @@ def feedback_run(phase_list):
     return a_4_out
 
 
-print("IterRun: {0}".format(feedback_run([0,1,2,3,4])))
+print("IterRun: {0}".format(feedback_run([0, 1, 2, 3, 4])))
+
 
 def brute_force():
     best_val = -9999999
     best_comb = None
-    for i1 in range(5,10):
-        for i2 in range(5,10):
-            for i3 in range(5,10):
-                for i4 in range(5,10):
-                    for i5 in range(5,10):
+    for i1 in range(5, 10):
+        for i2 in range(5, 10):
+            for i3 in range(5, 10):
+                for i4 in range(5, 10):
+                    for i5 in range(5, 10):
                         t = (i1, i2, i3, i4, i5)
                         # Check no repetitions
                         if len(t) == len(set(t)):
@@ -171,5 +164,6 @@ def brute_force():
                                 best_val = o
                                 best_comb = t
     return best_comb, best_val
+
 
 print(brute_force())
