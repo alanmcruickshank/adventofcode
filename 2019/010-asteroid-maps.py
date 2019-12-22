@@ -2,6 +2,7 @@
 
 import math
 
+
 class Asteroid(object):
     def __init__(self, x, y):
         self.x = x
@@ -10,7 +11,8 @@ class Asteroid(object):
 
     def __str__(self):
         if self.stats:
-            return "<Asteroid @{x},{y} {stats!r}>".format(x=self.x, y=self.y, stats=self.stats)
+            return "<Asteroid @{x},{y} {stats!r}>".format(
+                x=self.x, y=self.y, stats=self.stats)
         else:
             return "<Asteroid @{x},{y}>".format(x=self.x, y=self.y)
 
@@ -31,8 +33,10 @@ class Asteroid(object):
             if gcd == 1 or manhattan_distance == 0:
                 break
             else:
-                displacement_vector = tuple(elem // gcd for elem in displacement_vector)
+                displacement_vector = tuple(
+                    elem // gcd for elem in displacement_vector)
         return displacement_vector, manhattan_distance
+
 
 class AsteroidField(object):
     def __init__(self, map_list):
@@ -84,7 +88,8 @@ class AsteroidField(object):
         # Bearing is defined zero at dead horizontal right and rotates
         # clockwise to +pi. if at any point there are not points
         # at a higher bearing, then we minus 2pi from it and carry on.
-        # ACTUALLY - do it in fractions so we're not messed up by floating point error
+        # ACTUALLY - do it in fractions so we're not messed up by
+        # floating point error
         laser_bearing = (0, -1)  # -math.pi / 2
         target_n = 1
 
@@ -96,9 +101,20 @@ class AsteroidField(object):
             # Get the visible asteroids
             visible = self.get_visible(roid)
             # Make a list and sort by bearing FROM THE LASER
-            visible = [(b, math.atan2(b[1], b[0]) - math.atan2(laser_bearing[1], laser_bearing[0]), *visible[b]) for b in visible]
+            visible = [
+                (
+                    b,
+                    math.atan2(b[1], b[0])
+                    - math.atan2(laser_bearing[1], laser_bearing[0]),
+                    *visible[b]
+                )
+                for b in visible
+            ]
             # For any bearings less than zero add 2pi
-            visible = [(b, a + (2 * math.pi) if a < 0 else a, d, r) for b, a, d, r in visible]
+            visible = [
+                (b, a + (2 * math.pi) if a < 0 else a, d, r)
+                for b, a, d, r in visible
+            ]
             # Sort by angle from laser
             visible = sorted(visible, key=lambda v: v[1])
             # Identify the current target

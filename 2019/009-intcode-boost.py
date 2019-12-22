@@ -55,9 +55,13 @@ class IntComp(object):
                 self.memory[self.memory[self.prog_pointer + 3]] = res
             elif p3_mode == 2:
                 # relative mode
-                self.memory[self.rel_base + self.memory[self.prog_pointer + 3]] = res
+                self.memory[self.rel_base + self.memory[
+                    self.prog_pointer + 3]] = res
             else:
-                raise ValueError("Unexpected Parameter Mode for input (opcode {1}): {0}".format(p3_mode, op_code))
+                raise ValueError(
+                    ("Unexpected Parameter Mode for input "
+                     "(opcode {1}): {0}").format(
+                        p3_mode, op_code))
             self.prog_pointer += 4
         elif instruction == 3:
             # Get input
@@ -73,9 +77,11 @@ class IntComp(object):
                 self.memory[self.memory[self.prog_pointer + 1]] = i
             elif p1_mode == 2:
                 # relative mode
-                self.memory[self.rel_base + self.memory[self.prog_pointer + 1]] = i
+                self.memory[self.rel_base + self.memory[
+                    self.prog_pointer + 1]] = i
             else:
-                raise ValueError("Unexpected Parameter Mode for input (opcode 3): {0}".format(p1_mode))
+                raise ValueError(("Unexpected Parameter Mode for "
+                                  "input (opcode 3): {0}").format(p1_mode))
             self.prog_pointer += 2
         elif instruction == 4:
             # Put Output
@@ -86,7 +92,7 @@ class IntComp(object):
             # Jump if true/false
             arg1 = self.get_from_memory(1, p1_mode)
             arg2 = self.get_from_memory(2, p2_mode)
-            if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):
+            if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):  # noqa
                 self.prog_pointer = arg2
             else:
                 self.prog_pointer += 3
@@ -104,7 +110,8 @@ class IntComp(object):
     def run(self, input_buffer=None):
         if not self.halt:
             while True:
-                input_buffer, output = self.take_step(input_buffer=input_buffer)
+                input_buffer, output = self.take_step(
+                    input_buffer=input_buffer)
                 if output:
                     return output
                 if self.halt:
@@ -120,11 +127,11 @@ boost_code = [1102,34463338,34463338,63,1007,63,34463338,63,1005,63,53,1102,1,3,
 test_code_1 = [
     109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100,
     16, 101, 1006, 101, 0, 99]
-test_code_2 = [1102,34915192,34915192,7,4,7,99,0]
-test_code_3 = [104,1125899906842624,99]
+test_code_2 = [1102, 34915192, 34915192, 7, 4, 7, 99, 0]
+test_code_3 = [104, 1125899906842624, 99]
 
 
-c = IntComp(code=boost_code)  #boost_code
+c = IntComp(code=boost_code)
 input_buffer = None
 while True:
     r = c.run(input_buffer=input_buffer)
