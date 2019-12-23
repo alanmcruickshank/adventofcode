@@ -177,7 +177,10 @@ class System(object):
         factors = [self.prime_factors(p) for p in periods]
         # We want to use each factor only as many times as it appears in *any*.
         unique_factors = set.union(*[set(f.keys()) for f in factors])
-        final_factors = {k: max([f.get(k, 0) for f in factors]) for k in unique_factors}
+        final_factors = {
+            k: max([f.get(k, 0) for f in factors])
+            for k in unique_factors
+        }
         period = 1
         for k in final_factors:
             period *= k ** final_factors[k]
@@ -185,7 +188,7 @@ class System(object):
 
     def analyse(self):
         """Decompose each of the axes, simulate seperately.
-        
+
         Each axis is effectively independent, first we have to find each of
         their periods and offsets and then we can effectively fast forward to
         find their intersection.
@@ -202,7 +205,6 @@ class System(object):
         # Divide by common factors
         period = self.common_period(*[axis[1] for axis in analysis_buff])
         return analysis_buff, period
-
 
 
 example_struct = [
@@ -222,4 +224,4 @@ test_struct = [
 s = System.from_iterable(test_struct)
 print(s)
 print(s.analyse())
-
+# Answer is 354540398381256
