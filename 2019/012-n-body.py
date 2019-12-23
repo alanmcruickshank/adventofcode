@@ -38,6 +38,9 @@ class Vector(object):
     def energy(self):
         return abs(self.x) + abs(self.y) + abs(self.z)
 
+    def to_tuple(self):
+        return (self.x, self.y, self.z)
+
 
 class Moon(object):
     def __init__(self, pos):
@@ -57,11 +60,15 @@ class Moon(object):
     def energy(self):
         return self.pos.energy() * self.vel.energy()
 
+    def to_tuple(self):
+        return (self.pos.to_tuple(), self.vel.to_tuple())
+
 
 class System(object):
     def __init__(self, *moons):
         self.moons = moons
         self.step = 0
+        self.prev_states = set()
 
     def apply_gravity(self):
         for m in self.moons:
@@ -70,6 +77,7 @@ class System(object):
             m.apply_gravity_from(*self.moons)
 
     def take_step(self):
+        self.prev_states.add(self.to_tuple())
         self.apply_gravity()
         for m in self.moons:
             m.take_vel_step()
@@ -92,19 +100,49 @@ class System(object):
             else:
                 self.take_step()
 
+    def sim_until_prev(self):
+        while True:
+            if self.to_tuple() in self.prev_states:
+                break
+            else:
+                self.take_step()
+
+    def to_tuple(self):
+        return tuple([m.to_tuple() for m in self.moons])
+
+    @classmethod
+    def from_iterable(cls, moons_structs):
+        moon_objs = []
+        for m in moons_structs:
+            moon_objs.append(Moon(Vector(*m)))
+        return cls(*moon_objs)
+
+
 # TEST
 # <x=9, y=13, z=-8>
 # <x=-3, y=16, z=-17>
 # <x=-4, y=11, z=-10>
 # <x=0, y=-2, z=-2>
 
-s = System(
-    Moon(Vector(9, 13, -8)),
-    Moon(Vector(-3, 16, -17)),
-    Moon(Vector(-4, 11, -10)),
-    Moon(Vector(0, -2, -2))
-)
+example_struct = [
+    (-1, 0, 2),
+    (2, -10, -7),
+    (4, -8, 8),
+    (3, 5, -1)
+]
 
+test_struct = [
+    (9, 13, -8),
+    (-3, 16, -17),
+    (-4, 11, -10),
+    (0, -2, -2)
+]
+
+s = System.from_iterable(example_struct)
 print(s)
-s.sim_until(step=1000)
+s.sim_until(step=100)
 print(s)
+s.sim_until_prev()
+print(s)
+# print(s.to_tuple())
+# print(s.to_tuple() in s.prev_states)
