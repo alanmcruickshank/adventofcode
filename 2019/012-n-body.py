@@ -14,7 +14,7 @@ class Vector(object):
             z=self.z + other.z)
 
     @staticmethod
-    def _unit_diff(a, b):
+    def unit_diff(a, b):
         """Compares b & a. Returns 1 if b < a."""
         if b < a:
             return 1
@@ -25,9 +25,9 @@ class Vector(object):
 
     def grav_diff(self, other):
         return self.__class__(
-            self._unit_diff(other.x, self.x),
-            self._unit_diff(other.y, self.y),
-            self._unit_diff(other.z, self.z)
+            self.unit_diff(other.x, self.x),
+            self.unit_diff(other.y, self.y),
+            self.unit_diff(other.z, self.z)
         )
 
     def __str__(self):
@@ -41,6 +41,9 @@ class Vector(object):
     def to_tuple(self):
         return (self.x, self.y, self.z)
 
+    def __getitem__(self, val):
+        return (self.x, self.y, self.z)[val]
+
 
 class Moon(object):
     def __init__(self, pos):
@@ -53,7 +56,7 @@ class Moon(object):
 
     def take_vel_step(self):
         self.pos += self.vel
- 
+
     def __str__(self):
         return "<Moon @{0}, vel:{1}>".format(self.pos, self.vel)
 
@@ -92,7 +95,8 @@ class System(object):
 
     def sim_until(self, step=100):
         if self.step > step:
-            raise ValueError("Cannot sim until a number that has already passed!")
+            raise ValueError(
+                "Cannot sim until a number that has already passed!")
 
         while True:
             if self.step == step:
@@ -117,12 +121,89 @@ class System(object):
             moon_objs.append(Moon(Vector(*m)))
         return cls(*moon_objs)
 
+    @staticmethod
+    def step_1d(world):
+        world_buffer = []
+        # Apply Gravity, then velocity
+        for m in world:
+            # iterate each of the subjects
+            dv = 0
+            for t in world:
+                # iterate each of the references
+                dv += Vector.unit_diff(t[0], m[0])
+            v = m[1] + dv
+            world_buffer.append((m[0] + v, v))
+        return tuple(world_buffer)
 
-# TEST
-# <x=9, y=13, z=-8>
-# <x=-3, y=16, z=-17>
-# <x=-4, y=11, z=-10>
-# <x=0, y=-2, z=-2>
+    def analyse_axis(self, idx):
+        """Analyse the offset and period for a given axis."""
+
+        world_state = tuple([
+            (m.pos[idx], m.vel[idx])
+            for m in self.moons
+        ])
+        step = self.step
+        prev_states = {}
+        while True:
+            if world_state in prev_states:
+                # We've found a recurrance, return the first and
+                # second occurrance
+                return prev_states[world_state], step
+            else:
+                # No recurrance (take another step)
+                prev_states[world_state] = step
+                world_state = self.step_1d(world_state)
+                step += 1
+
+    @staticmethod
+    def prime_factors(val):
+        """From https://stackoverflow.com/questions/15347174/python-finding-prime-factors"""  # noqa
+        n = val
+        i = 2
+        factors = {}
+        while i * i < n:
+            while n % i == 0:
+                if i in factors:
+                    factors[i] += 1
+                else:
+                    factors[i] = 1
+                n = n / i
+            i = i + 1
+        factors[int(n)] = 1
+        return factors
+
+    def common_period(self, *periods):
+        """Find the common period of three periods."""
+        factors = [self.prime_factors(p) for p in periods]
+        # We want to use each factor only as many times as it appears in *any*.
+        unique_factors = set.union(*[set(f.keys()) for f in factors])
+        final_factors = {k: max([f.get(k, 0) for f in factors]) for k in unique_factors}
+        period = 1
+        for k in final_factors:
+            period *= k ** final_factors[k]
+        return period
+
+    def analyse(self):
+        """Decompose each of the axes, simulate seperately.
+        
+        Each axis is effectively independent, first we have to find each of
+        their periods and offsets and then we can effectively fast forward to
+        find their intersection.
+        """
+        analysis_buff = []
+        for i in range(0, 3):
+            analysis_buff.append(self.analyse_axis(i))
+
+        if any([axis[0] != 0 for axis in analysis_buff]):
+            raise ValueError(
+                "One of the axes has a non-zero offset! {0!r}".format(
+                    analysis_buff))
+
+        # Divide by common factors
+        period = self.common_period(*[axis[1] for axis in analysis_buff])
+        return analysis_buff, period
+
+
 
 example_struct = [
     (-1, 0, 2),
@@ -138,11 +219,7 @@ test_struct = [
     (0, -2, -2)
 ]
 
-s = System.from_iterable(example_struct)
+s = System.from_iterable(test_struct)
 print(s)
-s.sim_until(step=100)
-print(s)
-s.sim_until_prev()
-print(s)
-# print(s.to_tuple())
-# print(s.to_tuple() in s.prev_states)
+print(s.analyse())
+
