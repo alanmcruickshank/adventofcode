@@ -35,6 +35,9 @@ class Vector(object):
             self.x, self.y, self.z
         )
 
+    def energy(self):
+        return abs(self.x) + abs(self.y) + abs(self.z)
+
 
 class Moon(object):
     def __init__(self, pos):
@@ -47,9 +50,12 @@ class Moon(object):
 
     def take_vel_step(self):
         self.pos += self.vel
-    
+ 
     def __str__(self):
         return "<Moon @{0}, vel:{1}>".format(self.pos, self.vel)
+
+    def energy(self):
+        return self.pos.energy() * self.vel.energy()
 
 
 class System(object):
@@ -70,22 +76,35 @@ class System(object):
         self.step += 1
 
     def __str__(self):
-        buff = "<System, steps:{0}>\n".format(self.step)
+        energy = sum([m.energy() for m in self.moons])
+        buff = "<System, steps:{0}, energy:{1}>\n".format(self.step, energy)
         for m in self.moons:
             buff += "    {0}\n".format(m)
         return buff
 
+    def sim_until(self, step=100):
+        if self.step > step:
+            raise ValueError("Cannot sim until a number that has already passed!")
+
+        while True:
+            if self.step == step:
+                break
+            else:
+                self.take_step()
+
+# TEST
+# <x=9, y=13, z=-8>
+# <x=-3, y=16, z=-17>
+# <x=-4, y=11, z=-10>
+# <x=0, y=-2, z=-2>
 
 s = System(
-    Moon(Vector(-1, 0, 2)),
-    Moon(Vector(2, -10, -7)),
-    Moon(Vector(4, -8, 8)),
-    Moon(Vector(3, 5, -1))
+    Moon(Vector(9, 13, -8)),
+    Moon(Vector(-3, 16, -17)),
+    Moon(Vector(-4, 11, -10)),
+    Moon(Vector(0, -2, -2))
 )
 
-print(Vector(-1, 0, 2).grav_diff(Vector(2, -10, -7)))
-
 print(s)
-for i in range(10):
-    s.take_step()
-    print(s)
+s.sim_until(step=1000)
+print(s)
