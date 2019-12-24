@@ -12,7 +12,7 @@ class IntComp(object):
         'arcade': '013-arcade.txt',
     }
 
-    def __init__(self, code):
+    def __init__(self, code, input_processor=None):
         # If code is a string, it might be a reference to an inbuilt program
         if isinstance(code, str):
             if code in self.inbuilt_programs:
@@ -34,6 +34,7 @@ class IntComp(object):
         self.prog_pointer = 0
         self.await_input = False
         self.rel_base = 0
+        self.input_processor = input_processor
 
     def get_from_memory(self, offset, mode):
         val = self.memory[self.prog_pointer + offset]
@@ -47,6 +48,14 @@ class IntComp(object):
             return self.memory.get(self.rel_base + val, 0)
         else:
             raise ValueError("Unexpected Parameter Mode: {0}".format(mode))
+
+    def process_input(self, val):
+        if self.input_processor is None:
+            return int(val)
+        elif isinstance(self.input_processor, dict):
+            return int(self.input_processor.get(val, val))
+        else:
+            raise RuntimeError("Unknown input_processor")
 
     def take_step(self, idx=0, input_buffer=None):
         op_code = self.memory[self.prog_pointer]
@@ -148,6 +157,7 @@ class IntComp(object):
                     if interactive is True or interactive == 'in':
                         input_buffer = input("INPUT: ")
                         if input_buffer != '':
+                            input_buffer = self.process_input(input_buffer)
                             self.await_input = False
                         else:
                             print("FAILED INPUT")
@@ -156,17 +166,68 @@ class IntComp(object):
                         return
 
 
-class Arcade(object):
-    def __init__(self):
-        self.comp = IntComp('arcade')
-        self.elems = []
 
-    def run(self):
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
+
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+
+getch = _Getch()
+
+
+class Arcade(object):
+    def __init__(self, quarters=0, input_processor=None):
+        self.comp = IntComp('arcade', input_processor=input_processor)
+        self.elems = []
+        # Set quarters (2 for free play)
+        self.comp.memory[0] = quarters
+        self.input_processor = input_processor
+
+    def run(self, interactive=False):
         buff = []
+        input_buffer = None
         while True:
             if self.comp.halt:
                 break
-            buff.append(self.comp.run())
+            if self.comp.await_input:
+                print(self.to_str())
+                print("CONTROL?")
+                input_buffer = getch().decode()
+                input_buffer = self.input_processor[input_buffer]
+            out = self.comp.run(interactive=interactive, input_buffer=input_buffer)
+            if out is not None:
+                buff.append(out)
             if len(buff) == 3:
                 self.elems.append(buff)
                 buff = []
@@ -178,25 +239,32 @@ class Arcade(object):
         y_extents = (min(y_cords), max(y_cords))
         x0 = x_extents[0]
         y0 = y_extents[0]
+        score = 0
 
-        grid = (
-            [[' '] * (x_extents[1] - x_extents[0] + 1)]
-            * (y_extents[1] - y_extents[0] + 1)
-        )
+        grid = []
+        for y in range(0, y_extents[1] + 1):
+            buff = []
+            for x in range(0, x_extents[1] + 1):
+                buff.append([' '])
+            grid.append(buff)
 
         lookup = {
-            # 0: ' ',  # Empty
+            0: ' ',  # Empty
             1: '+',  # Wall
             2: '#',  # Block
             3: '=',  # Paddle
             4: 'o'   # Ball
         }
-
+        
         for x, y, code in self.elems:
-            if code != 0:
-                grid[y - y0][x - x0] = lookup[code]
+            if x >= 0:
+                grid[y][x] = lookup[code]
+            elif x == -1 and y == 0:
+                score = code
+            else:
+                raise ValueError("Unexpected coord")
 
-        return '\n'.join([''.join(elem) for elem in grid])
+        return 'score: {score}\n'.format(score=score) + '\n'.join([''.join(elem) for elem in grid])
 
 
 def test():
@@ -205,7 +273,7 @@ def test():
     c.run(interactive=True)
 
 
-def arcade():
+def arcade_1():
     a = Arcade()
     a.run()
     cnt = 0
@@ -217,4 +285,9 @@ def arcade():
     print(a.to_str())
 
 
-arcade()
+def arcade_2():
+    a = Arcade(quarters=2,
+               input_processor={'j': -1, 'k': 0, 'l': 1})
+    a.run()
+
+arcade_2()
