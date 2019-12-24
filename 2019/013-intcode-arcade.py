@@ -136,16 +136,16 @@ class IntComp(object):
             while True:
                 input_buffer, output = self.take_step(input_buffer=input_buffer)
                 if output is not None:
-                    if interactive:
+                    if interactive is True or interactive == 'out':
                         print("OUT:   {}".format(output))
                     else:
                         return output
                 if self.halt:
-                    if interactive:
+                    if interactive is not False:
                         print("HALT")
                     break
                 if self.await_input:
-                    if interactive:
+                    if interactive is True or interactive == 'in':
                         input_buffer = input("INPUT: ")
                         if input_buffer != '':
                             self.await_input = False
@@ -156,9 +156,65 @@ class IntComp(object):
                         return
 
 
+class Arcade(object):
+    def __init__(self):
+        self.comp = IntComp('arcade')
+        self.elems = []
+
+    def run(self):
+        buff = []
+        while True:
+            if self.comp.halt:
+                break
+            buff.append(self.comp.run())
+            if len(buff) == 3:
+                self.elems.append(buff)
+                buff = []
+
+    def to_str(self):
+        x_cords = [elem[0] for elem in self.elems]
+        y_cords = [elem[1] for elem in self.elems]
+        x_extents = (min(x_cords), max(x_cords))
+        y_extents = (min(y_cords), max(y_cords))
+        x0 = x_extents[0]
+        y0 = y_extents[0]
+
+        grid = (
+            [[' '] * (x_extents[1] - x_extents[0] + 1)]
+            * (y_extents[1] - y_extents[0] + 1)
+        )
+
+        lookup = {
+            # 0: ' ',  # Empty
+            1: '+',  # Wall
+            2: '#',  # Block
+            3: '=',  # Paddle
+            4: 'o'   # Ball
+        }
+
+        for x, y, code in self.elems:
+            if code != 0:
+                grid[y - y0][x - x0] = lookup[code]
+
+        return '\n'.join([''.join(elem) for elem in grid])
+
+
 def test():
     # Test
     c = IntComp('asteroid')
     c.run(interactive=True)
 
-test()
+
+def arcade():
+    a = Arcade()
+    a.run()
+    cnt = 0
+    for x, y, code in a.elems:
+        if code == 2:
+            cnt += 1
+            print(x, y)
+    print(cnt)
+    print(a.to_str())
+
+
+arcade()
