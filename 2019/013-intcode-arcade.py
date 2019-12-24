@@ -1,5 +1,7 @@
 """Day 13 - Intcode Arcade."""
 
+import time
+
 
 class IntComp(object):
 
@@ -224,17 +226,48 @@ class Arcade(object):
         self.comp.memory[0] = quarters
         self.input_processor = input_processor
 
-    def run(self, interactive=False):
+    @classmethod
+    def find_x(self, view, char):
+        for idx, row in enumerate(view.split('\n')):
+            if idx < 2:
+                # ignore the first couple of rows
+                continue
+            for idx, c in enumerate(row):
+                if c == char:
+                    return idx
+        raise RuntimeError("Cannot detect {0!r} in view!".format(char))
+
+    def run(self, interactive=False, auto=False, t_step=0.01):
         buff = []
         input_buffer = None
         while True:
             if self.comp.halt:
+                view = self.to_str()
+                print(view)
                 break
             if self.comp.await_input:
-                print(self.to_str())
-                print("CONTROL?")
-                input_buffer = getch().decode()
-                input_buffer = self.input_processor[input_buffer]
+                view = self.to_str()
+                if auto:
+                    if t_step > 0:
+                        print(view)
+                        time.sleep(t_step)
+                    ball_x = self.find_x(view, 'o')
+                    pad_x = self.find_x(view, '=')
+                    if t_step > 0:
+                        print(ball_x, pad_x)
+                    if ball_x == pad_x:
+                        input_buffer = 0
+                    elif ball_x < pad_x:
+                        input_buffer = -1
+                    elif ball_x > pad_x:
+                        input_buffer = 1
+                    else:
+                        raise RuntimeError("Unexpected! falsuihaelsfkj")
+                else:
+                    print(view)
+                    print("CONTROL?")
+                    input_buffer = getch().decode()
+                    input_buffer = self.input_processor[input_buffer]
             out = self.comp.run(
                 interactive=interactive,
                 input_buffer=input_buffer
@@ -302,7 +335,7 @@ def arcade_1():
 def arcade_2():
     a = Arcade(quarters=2,
                input_processor={'j': -1, 'k': 0, 'l': 1})
-    a.run()
+    a.run(auto=True, t_step=0)
 
 
 arcade_2()
