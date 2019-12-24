@@ -126,9 +126,14 @@ class IntComp(object):
                 self.memory[self.memory[self.prog_pointer + 3]] = res
             elif p3_mode == 2:
                 # relative mode
-                self.memory[self.rel_base + self.memory[self.prog_pointer + 3]] = res
+                self.memory[
+                    self.rel_base + self.memory[
+                        self.prog_pointer + 3]] = res
             else:
-                raise ValueError("Unexpected Parameter Mode for input (opcode {1}): {0}".format(p3_mode, op_code))
+                raise ValueError(
+                    ("Unexpected Parameter Mode for "
+                     "input (opcode {1}): {0}").format(
+                        p3_mode, op_code))
             self.prog_pointer += 4
         elif instruction == 3:
             # Get input
@@ -144,9 +149,14 @@ class IntComp(object):
                 self.memory[self.memory[self.prog_pointer + 1]] = i
             elif p1_mode == 2:
                 # relative mode
-                self.memory[self.rel_base + self.memory[self.prog_pointer + 1]] = i
+                self.memory[
+                    self.rel_base + self.memory[
+                        self.prog_pointer + 1]] = i
             else:
-                raise ValueError("Unexpected Parameter Mode for input (opcode 3): {0}".format(p1_mode))
+                raise ValueError(
+                    ("Unexpected Parameter Mode for "
+                     "input (opcode 3): {0}").format(
+                        p1_mode))
             self.prog_pointer += 2
         elif instruction == 4:
             # Put Output
@@ -157,7 +167,7 @@ class IntComp(object):
             # Jump if true/false
             arg1 = self.get_from_memory(1, p1_mode)
             arg2 = self.get_from_memory(2, p2_mode)
-            if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):
+            if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):  # noqa
                 self.prog_pointer = arg2
             else:
                 self.prog_pointer += 3
@@ -179,7 +189,8 @@ class IntComp(object):
             return
         else:
             while True:
-                input_buffer, output = self.take_step(input_buffer=input_buffer)
+                input_buffer, output = self.take_step(
+                    input_buffer=input_buffer)
                 if output is not None:
                     if interactive:
                         print("OUT:   {}".format(output))
@@ -264,7 +275,8 @@ class HullPainterSim(object):
         self.comp = IntComp(code=paint_code)
         # Initialise position
         self.pos = (0, 0)  # x, y
-        self.dir = 0  # 0 means up. 1 is right, 2 is down, 3 is left (-1 is also left)
+        # 0 means up. 1 is right, 2 is down, 3 is left (-1 is also left)
+        self.dir = 0
 
     def run(self):
         input_buffer = None
@@ -285,7 +297,9 @@ class HullPainterSim(object):
                     elif r == 0:
                         self.dir -= 1
                     else:
-                        raise ValueError("Unexpected direction output: {0}".format(self.dir))
+                        raise ValueError(
+                            "Unexpected direction output: {0}".format(
+                                self.dir))
                     self.dir %= 4
                     # Move
                     if self.dir % 2 == 0:
@@ -297,8 +311,8 @@ class HullPainterSim(object):
                     # Expect colour next: next_out_paint
                     next_out_paint = True
             if self.comp.halt:
-                print("> Halt!: Ever painted: {0}".format(self.hull.num_painted()))
-                # print("> Halt!: Ever painted: {0!r}".format(self.hull._ever_painted))
+                print("> Halt!: Ever painted: {0}".format(
+                    self.hull.num_painted()))
                 break
             if self.comp.await_input:
                 hull_col = self.hull.get_colour(*self.pos)
@@ -313,13 +327,16 @@ def test():
     c = IntComp('asteroid')
     c.run(interactive=True)
 
+
 def challenge_1():
     r = HullPainterSim()
     r.run()
+
 
 def challenge_2():
     r = HullPainterSim(init_white=[(0, 0)])
     r.run()
     print(r.to_str())
+
 
 challenge_2()

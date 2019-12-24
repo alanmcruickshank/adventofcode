@@ -90,9 +90,13 @@ class IntComp(object):
                 self.memory[self.memory[self.prog_pointer + 3]] = res
             elif p3_mode == 2:
                 # relative mode
-                self.memory[self.rel_base + self.memory[self.prog_pointer + 3]] = res
+                self.memory[self.rel_base + self.memory[
+                    self.prog_pointer + 3]] = res
             else:
-                raise ValueError("Unexpected Parameter Mode for input (opcode {1}): {0}".format(p3_mode, op_code))
+                raise ValueError(
+                    ("Unexpected Parameter Mode for "
+                     "input (opcode {1}): {0}").format(
+                        p3_mode, op_code))
             self.prog_pointer += 4
         elif instruction == 3:
             # Get input
@@ -108,9 +112,13 @@ class IntComp(object):
                 self.memory[self.memory[self.prog_pointer + 1]] = i
             elif p1_mode == 2:
                 # relative mode
-                self.memory[self.rel_base + self.memory[self.prog_pointer + 1]] = i
+                self.memory[self.rel_base + self.memory[
+                    self.prog_pointer + 1]] = i
             else:
-                raise ValueError("Unexpected Parameter Mode for input (opcode 3): {0}".format(p1_mode))
+                raise ValueError(
+                    ("Unexpected Parameter Mode for "
+                     "input (opcode 3): {0}").format(
+                        p1_mode))
             self.prog_pointer += 2
         elif instruction == 4:
             # Put Output
@@ -121,7 +129,7 @@ class IntComp(object):
             # Jump if true/false
             arg1 = self.get_from_memory(1, p1_mode)
             arg2 = self.get_from_memory(2, p2_mode)
-            if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):
+            if (instruction == 5 and arg1 != 0) or (instruction == 6 and arg1 == 0):  # noqa
                 self.prog_pointer = arg2
             else:
                 self.prog_pointer += 3
@@ -143,7 +151,8 @@ class IntComp(object):
             return
         else:
             while True:
-                input_buffer, output = self.take_step(input_buffer=input_buffer)
+                input_buffer, output = self.take_step(
+                    input_buffer=input_buffer)
                 if output is not None:
                     if interactive is True or interactive == 'out':
                         print("OUT:   {}".format(output))
@@ -166,9 +175,10 @@ class IntComp(object):
                         return
 
 
-
 class _Getch:
-    """Gets a single character from standard input.  Does not echo to the screen."""
+    """Gets a single character from standard input.
+
+    Does not echo to the screen."""
     def __init__(self):
         try:
             self.impl = _GetchWindows()
@@ -180,10 +190,10 @@ class _Getch:
 
 class _GetchUnix:
     def __init__(self):
-        import tty, sys
+        import tty, sys  # noqa
 
     def __call__(self):
-        import sys, tty, termios
+        import sys, tty, termios  # noqa
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -196,7 +206,7 @@ class _GetchUnix:
 
 class _GetchWindows:
     def __init__(self):
-        import msvcrt
+        import msvcrt  # noqa
 
     def __call__(self):
         import msvcrt
@@ -225,7 +235,10 @@ class Arcade(object):
                 print("CONTROL?")
                 input_buffer = getch().decode()
                 input_buffer = self.input_processor[input_buffer]
-            out = self.comp.run(interactive=interactive, input_buffer=input_buffer)
+            out = self.comp.run(
+                interactive=interactive,
+                input_buffer=input_buffer
+            )
             if out is not None:
                 buff.append(out)
             if len(buff) == 3:
@@ -237,8 +250,6 @@ class Arcade(object):
         y_cords = [elem[1] for elem in self.elems]
         x_extents = (min(x_cords), max(x_cords))
         y_extents = (min(y_cords), max(y_cords))
-        x0 = x_extents[0]
-        y0 = y_extents[0]
         score = 0
 
         grid = []
@@ -255,7 +266,7 @@ class Arcade(object):
             3: '=',  # Paddle
             4: 'o'   # Ball
         }
-        
+
         for x, y, code in self.elems:
             if x >= 0:
                 grid[y][x] = lookup[code]
@@ -264,7 +275,10 @@ class Arcade(object):
             else:
                 raise ValueError("Unexpected coord")
 
-        return 'score: {score}\n'.format(score=score) + '\n'.join([''.join(elem) for elem in grid])
+        return (
+            'score: {score}\n'.format(score=score)
+            + '\n'.join([''.join(elem) for elem in grid])
+        )
 
 
 def test():
@@ -289,5 +303,6 @@ def arcade_2():
     a = Arcade(quarters=2,
                input_processor={'j': -1, 'k': 0, 'l': 1})
     a.run()
+
 
 arcade_2()
