@@ -254,13 +254,18 @@ class HullGrid(object):
         x0 = x_extents[0]
         y0 = y_extents[0]
         # Make a blank grid and add white.
-        grid = (
-            [['.'] * (x_extents[1] - x_extents[0] + 1)]
-            * (y_extents[1] - y_extents[0] + 1)
-        )
+        grid = []
+        for y in range(0, y_extents[1] + 1 - y_extents[0]):
+            buff = []
+            for x in range(0, x_extents[1] + 1 - x_extents[0]):
+                buff.append('.')
+            grid.append(buff)
         # Add all the white
         for x, y in self._white_squares:
             grid[y - y0][x - x0] = '#'
+
+        # Need to reverse list so it's the right way up.
+        grid.reverse()
         return '\n'.join([''.join(elem) for elem in grid])
 
 
