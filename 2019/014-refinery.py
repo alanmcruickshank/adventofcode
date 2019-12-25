@@ -134,6 +134,6 @@ class Recipe(object):
         print(buff)
 
 
-r = Recipe.from_file('014-recipe-2.txt')
+r = Recipe.from_file('014-recipe-challenge.txt')
 # print(r.recipe_buff)
 r.solve()
