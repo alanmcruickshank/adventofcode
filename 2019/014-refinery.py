@@ -145,32 +145,42 @@ class Recipe(object):
         unit_map[estimate_point] = self.solve(
             goal_units=estimate_point)[goal_unit]
 
-        if estimate_point < goal_limit:
-            up_down = 'up'
-        else:
-            up_down = 'down'
+        grain = 10000
+        while True:
+            if unit_map[estimate_point] < goal_limit:
+                up_down = 'up'
+            else:
+                up_down = 'down'
+            # print(up_down)
 
-        if up_down == 'up':
-            while True:
-                estimate_point += 1
+            if up_down == 'up':
+                estimate_point += grain
                 unit_map[estimate_point] = self.solve(
                     goal_units=estimate_point)[goal_unit]
+                # print(estimate_point, unit_map[estimate_point])
                 if unit_map[estimate_point] > goal_limit:
-                    solve_point = estimate_point - 1
-                    break
-        else:
-            while True:
-                estimate_point -= 1
+                    if grain == 1:
+                        solve_point = estimate_point - 1
+                        break
+                    else:
+                        grain = int(grain / 10)
+            else:
+                estimate_point -= grain
                 unit_map[estimate_point] = self.solve(
                     goal_units=estimate_point)[goal_unit]
+                # print(estimate_point, unit_map[estimate_point])
                 if unit_map[estimate_point] < goal_limit:
-                    solve_point = estimate_point
+                    if grain == 1:
+                        solve_point = estimate_point
+                        break
+                    else:
+                        grain = int(grain / 10)
 
-        print(solve_point)
-        print(unit_map[solve_point])
+        print("Fuel: {0}".format(solve_point))
+        print("Ore Reqd: {0}".format(unit_map[solve_point]))
 
 
-r = Recipe.from_file('014-recipe-3.txt')
+r = Recipe.from_file('014-recipe-challenge.txt')
 # print(r.recipe_buff)
 print("Soliving:")
 print(r.solve(goal_units=2))
