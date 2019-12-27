@@ -56,13 +56,15 @@ class Recipe(object):
         # Instantiate the class
         return cls(recipe_buff)
 
-    def solve(self, goal='FUEL', raw='ORE'):
-        goal_units = self.recipe_buff[goal][0]
-        if goal_units != 1:
-            raise ValueError(
-                "End result {0} is made in units of {1}.".format(
-                    goal, goal_units))
-        buff = self.recipe_buff[goal][1]
+    def solve(self, goal='FUEL', raw='ORE', goal_units=1):
+        goal_recipe_units = self.recipe_buff[goal][0]
+        goal_multiple = goal_units // goal_recipe_units
+        if goal_units % goal_recipe_units:
+            goal_multiple += 1
+        # Multiply up the recipe
+        buff = self.recipe_buff[goal][1].copy()
+        for k in buff:
+            buff[k] *= goal_multiple
         # Print out result
         # # print(buff)
 
@@ -130,10 +132,46 @@ class Recipe(object):
                 # raise ValueError("No tidy breakdowns found in iteration. :(")
 
         # End Result
-        print("Done")
-        print(buff)
+        return buff
+
+    def find_for_less_than(self, goal_unit='ORE', goal_limit=1000000):
+        unit_map = {
+            1: self.solve(goal_units=1)[goal_unit],
+            10: self.solve(goal_units=10)[goal_unit]
+        }
+        rough_factor = (unit_map[10] - unit_map[1]) / (10 - 1)
+        print(rough_factor)
+        estimate_point = int(goal_limit // rough_factor)
+        unit_map[estimate_point] = self.solve(
+            goal_units=estimate_point)[goal_unit]
+
+        if estimate_point < goal_limit:
+            up_down = 'up'
+        else:
+            up_down = 'down'
+
+        if up_down == 'up':
+            while True:
+                estimate_point += 1
+                unit_map[estimate_point] = self.solve(
+                    goal_units=estimate_point)[goal_unit]
+                if unit_map[estimate_point] > goal_limit:
+                    solve_point = estimate_point - 1
+                    break
+        else:
+            while True:
+                estimate_point -= 1
+                unit_map[estimate_point] = self.solve(
+                    goal_units=estimate_point)[goal_unit]
+                if unit_map[estimate_point] < goal_limit:
+                    solve_point = estimate_point
+
+        print(solve_point)
+        print(unit_map[solve_point])
 
 
-r = Recipe.from_file('014-recipe-challenge.txt')
+r = Recipe.from_file('014-recipe-3.txt')
 # print(r.recipe_buff)
-r.solve()
+print("Soliving:")
+print(r.solve(goal_units=2))
+r.find_for_less_than(goal_limit=1000000000000)
