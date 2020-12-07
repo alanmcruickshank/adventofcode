@@ -5,6 +5,15 @@ https://adventofcode.com/2020/day/6
 Read and buffer, just as before.
 """
 
+def compress_response_buff(buff, part=1):
+    if buff:
+        if part == 1:
+            return buff[0].union(*buff[1:])
+        elif part == 2:
+            return buff[0].intersection(*buff[1:])
+    return set()
+
+
 def read_customs_answers(fname, part=1):
     groups = []
     response_buff = []
@@ -14,20 +23,10 @@ def read_customs_answers(fname, part=1):
             if resps:
                 response_buff.append(resps)
             else:
-                if response_buff:
-                    if part == 1:
-                        response_buff = response_buff[0].union(*response_buff[1:])
-                    elif part == 2:
-                        response_buff = response_buff[0].intersection(*response_buff[1:])
-                    groups.append(response_buff)
+                groups.append(compress_response_buff(response_buff, part=part))
                 response_buff = []
     # Handle any trailing groups
-    if response_buff:
-        if part == 1:
-            response_buff = response_buff[0].union(*response_buff[1:])
-        elif part == 2:
-            response_buff = response_buff[0].intersection(*response_buff[1:])
-        groups.append(response_buff)
+    groups.append(compress_response_buff(response_buff, part=part))
     return groups
 
 for file in ["006-customs-test.txt", "006-customs-input.txt"]:
