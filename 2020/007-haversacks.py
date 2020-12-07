@@ -54,6 +54,10 @@ def containing_bag_options(contained_rules, search_bag):
     # Make an initial set of options.
     options = set()
     option_buffer = set()
+    # Deal with the case of no options
+    if search_bag not in contained_rules:
+        return options
+
     for containing_bag in contained_rules[search_bag]:
         option_buffer.add(containing_bag)
     
@@ -70,8 +74,24 @@ def containing_bag_options(contained_rules, search_bag):
     return options
 
 
-for file in ["007-haversacks-test.txt", "007-haversacks-input.txt"]:
+def count_containing_bags(rules_def, search_bag):
+    # Always count it self if nothing ele
+    running_total = 1
+    # Add on child bags if they exist [i.e. RECURSE].
+    if search_bag in rules_def:
+        for child_bag in rules_def[search_bag]:
+            per_child = count_containing_bags(rules_def, child_bag)
+            num_children = rules_def[search_bag][child_bag]
+            running_total += num_children * per_child
+    return running_total
+
+
+for file in ["007-haversacks-test.txt", "007-haversacks-test2.txt", "007-haversacks-input.txt"]:
     rules_def = load_rules_file(file)
+    # Part 1
     contained_rules = invert_rules(rules_def)
     options = containing_bag_options(contained_rules, 'shiny gold')
-    print(file, len(options))
+    # Part 2. (Minus one so we don't count the gold bag)
+    contained_bags = count_containing_bags(rules_def, 'shiny gold') - 1
+    print(file, len(options), contained_bags)
+    
