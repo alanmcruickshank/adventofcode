@@ -63,24 +63,42 @@ class SeatingPlan:
             for y in range(self._height)
         )
     
-    def occupancy_around(self, x, y):
+    def occupancy_around(self, x, y, method='view'):
         """Calculate the occupancy around this seat."""
         offsets = [
-            (-1, -1),
-            (0, -1),
-            (1, -1),
-            (-1, 0),
-            (1, 0),
-            (-1, 1),
-            (0, 1),
-            (1, 1),
-        ]
-        return sum(
-            self.get(x + dx, y + dy) or 0
-            for dx, dy in offsets
-        )       
+                (-1, -1),
+                (0, -1),
+                (1, -1),
+                (-1, 0),
+                (1, 0),
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+            ]
+        if method == 'touch':
+            return sum(
+                self.get(x + dx, y + dy) or 0
+                for dx, dy in offsets
+            )
+        elif method == 'view':
+            counts = 0
+            for dx, dy in offsets:
+                dist = 1
+                while True:
+                    nx, ny = x + (dist * dx), y + (dist * dy)
+                    # Have we gone too far?
+                    if nx < 0 or ny < 0 or nx >= self._width or ny >= self._height:
+                        v = 0
+                        break
+                    v = self.get(nx, ny)
+                    if v is not None:
+                        v = int(v)
+                        break
+                    dist += 1
+                counts += v
+            return counts
     
-    def step(self):
+    def step(self, leave_lim=5):
         """Take a step."""
         # Start a new plan to evaluate the whole thing at once.
         new_plan = []
@@ -92,7 +110,7 @@ class SeatingPlan:
                 if cur_val is None:
                     continue
                 occupancy = self.occupancy_around(x, y)
-                if cur_val is True and occupancy >= 4:
+                if cur_val is True and occupancy >= leave_lim:
                     new_row[x] = False
                     continue
                 if cur_val is False and occupancy == 0:
@@ -121,5 +139,13 @@ class SeatingPlan:
 for fname in inputs:
     print(fname)
     plan = SeatingPlan(fname)
+    # print(str(plan))
+    # for i in range(3):
+    #     print(i, " ---------------")
+    #     plan.step()
+    #     print(str(plan))
+    #     print("------")
+    #     print(plan.occupancy_map())
     plan.step_till_stable()
     # Part 1 answer: 2321
+    # Part 2 answer: 2102
