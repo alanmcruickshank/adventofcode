@@ -51,7 +51,7 @@ class Vector:
 class Ferry:
     def __init__(self):
         self.pos = Vector(0, 0)
-        self.dir = Vector(1, 0)
+        self.dir = Vector(10, 1)
     
     def __str__(self):
         return "<Ferry Pos: {0}, Dir: {1}>".format(self.pos, self.dir)
@@ -66,12 +66,13 @@ class Ferry:
             'S': Vector(0, -1),
             'E': Vector(1, 0),
             'W': Vector(-1, 0),
-            'F': self.dir,
         }
-        if action in rotations:
+        if action == 'F':
+            self.pos += self.dir * val
+        elif action in rotations:
             self.dir = self.dir.rotate(val * rotations[action])
         elif action in translations:
-            self.pos += translations[action] * val
+            self.dir += translations[action] * val
         else:
             ValueError("Unexpected action: {0}".format(action))
 
@@ -91,6 +92,9 @@ for idx, inst_set in enumerate(instruction_sets):
     print("Set ", idx + 1)
     ferry = Ferry()
     for inst in inst_set:
+        # print(ferry)
         ferry.move(inst)
     print(ferry)
     print(ferry.pos.manhattan_distance())
+    # Part 1 Answer: 1294
+    # Part 2 Answer: 20592
