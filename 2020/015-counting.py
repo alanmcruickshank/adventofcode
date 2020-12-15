@@ -18,7 +18,8 @@ initials = [
     [5, 1, 9, 18, 13, 8, 0]
 ]
 
-limit = 2020
+# Brute Force.
+limit = 30000000  # or 2020 for part 1
 
 for initial in initials:
     print("Initial: ", initial)
@@ -46,4 +47,8 @@ for initial in initials:
         n += 1
     print("Spoke", last_spoken, "at turn", n - 1)
     # Part 1 answer: 376
+    # Is there an elegant answer to part 2? Maybe, if
+    # so it probably involves finding a loop in the pattern
+    # and then exploiting the size of that loop.
+    # Part 2 answer: 323780
     
