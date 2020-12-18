@@ -37,6 +37,9 @@ class ExpressionElement:
             raise ValueError("Expression must have a list of values.")
         self.val = val
     
+    def to_int(self, **kwargs):
+        return int(self)
+
     def __int__(self):
         if self.name == 'numeric':
             return self.val
@@ -45,6 +48,14 @@ class ExpressionElement:
     
     def __repr__(self):
         return "<{0}: {1!r}>".format(self.name, self.val)
+
+    def __eq__(self, other):
+        return self.name == other.name and self.val == other.val
+
+
+class NumericElement(ExpressionElement):
+    def __init__(self, val):
+        super().__init__(name='numeric', val=val)
 
 
 class Expression(ExpressionElement):
@@ -103,32 +114,56 @@ class Expression(ExpressionElement):
     
     def __repr__(self):
         return "<Expression: {!r}>".format(self.val)
-    
-    def __int__(self):
-        if self.val[0].name == 'operator':
-            raise ValueError("Expression starts with operator! {0}".format(self))
-        
-        running = int(self.val[0])
-        idx = 1
 
-        while self.val[idx:]:
-            if self.val[idx].name != 'operator':
-                raise ValueError("Expected operator!? {0}".format(self.val[idx:]))
-            elif self.val[idx].val == '+':
-                running += int(self.val[idx + 1])
-            elif self.val[idx].val == '*':
-                running *= int(self.val[idx + 1])
+    @classmethod
+    def eval(cls, elems, level="basic", with_subdivide=True):
+        # print("EVAL: ", level, with_subdivide, elems)
+        if elems[0].name == 'operator':
+            raise ValueError("Expression starts with operator! {0}".format(self))
+        # In advanced maths, preprocess any additions
+        if level == 'advanced' and with_subdivide:
+            new_elems = []
+            elem_buff = []
+            for elem in elems:
+                if elem.name == 'operator' and elem.val == '*':
+                    new_elems.append(NumericElement(cls.eval(elem_buff, level=level, with_subdivide=False)))
+                    new_elems.append(elem)
+                    elem_buff = []
+                else:
+                    elem_buff.append(elem)
+            if elem_buff:
+                new_elems.append(NumericElement(cls.eval(elem_buff, level=level, with_subdivide=False)))
+            # if elems != new_elems:
+            #     print("Reduce: ", elems, " TO ", new_elems)
+            elems = new_elems
+
+        running = elems[0].to_int(level=level)
+        idx = 1
+        while elems[idx:]:
+            if elems[idx].name != 'operator':
+                raise ValueError("Expected operator!? {0} in {1}".format(elems[idx:], elems))
+            elif elems[idx].val == '+':
+                running += elems[idx + 1].to_int(level=level)
+            elif elems[idx].val == '*':
+                running *= elems[idx + 1].to_int(level=level)
             # Advance by two (operator and value)
             idx += 2
-        
         return running
+    
+    def to_int(self, level="basic"):
+        return self.eval(self.val, level=level)
+
+    def __int__(self):
+        return self.to_int()
 
 
 for example in examples:
     print("Example:", example)
     exp = Expression.from_raw(example)
     print(exp)
-    print(int(exp))
+    for level in ["basic", "advanced"]:
+        print(level, exp.to_int(level=level))
+
 
 print("Homework!")
 running = 0
@@ -137,3 +172,9 @@ with open("018-maths-input.txt") as txt_file:
         running += int(Expression.from_raw(line))
 print("Homework sum:", running)
 # Part 1 answer: 5019432542701
+running = 0
+with open("018-maths-input.txt") as txt_file:
+    for line in txt_file:
+        running += Expression.from_raw(line).to_int(level="advanced")
+print("Advanced Homework sum:", running)
+# Part 2 answer: 70518821989947
