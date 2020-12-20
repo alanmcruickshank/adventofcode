@@ -19,20 +19,11 @@ class MatcherLibrary:
             self._rules[int(rule_no)] = Matcher(rule_def)
         
     def match_ref(self, s, ref):
-        # print("...matchref", s, ref)
-        if ref in (8, 11):
-            print("......match_ref IN", ref, s)
-            m = self._rules[ref].match(s, self)
-            print("......match_ref OUT", ref, s, m)
-            return m
-        else:
-            return self._rules[ref].match(s, self)
+        return self._rules[ref].match(s, self)
     
     def is_total_match_ref(self, s, ref):
-        print("...is_total_match_ref IN", s)
-        matched, unmatched = self.match_ref(s, ref)
-        print("...is_total_match_ref OUT", s, unmatched == "")
-        return unmatched == ""
+        matches = self.match_ref(s, ref)
+        return any(unmatched == "" for _, unmatched in matches)
     
     def count_total_matches(self, messages, ref=0):
         return sum(self.is_total_match_ref(elem, ref) for elem in messages)
@@ -55,48 +46,40 @@ class Matcher:
             self.options.append(option)
 
     def match(self, s, lib):
-        """Match returns (matched, unmatched) as a list of tuples."""
-        # print("...match", s, self)
+        """Match returns list of [(matched, unmatched)] as a list of tuples."""
         matches = []
         for option in self.options:
-            print(".........matchopt", repr(s), option)
-            temp_s = s
-            matched_s = ""
+            forks = [("", s)] 
             for seq_elem in option:
-                # print(".......matchoptseq", temp_s, seq_elem)
-                if isinstance(seq_elem, str):
-                    # try matching text
-                    if temp_s.startswith(seq_elem):
-                        matched_s += seq_elem
-                        temp_s = temp_s[len(seq_elem):]
-                        continue
-                elif isinstance(seq_elem, int):
-                    matched, unmatched = lib.match_ref(temp_s, seq_elem)
-                    if matched:
-                        matched_s += matched
-                        temp_s = unmatched
-                        continue
-                
-                # If we get here we didn't match an element in the sequence
-                matched_s = ""
-                break
+                # Have we purged all the forks?
+                if not forks:
+                    break
+                new_forks = []
+                for matched_so_far, remainder in forks:
+                    if isinstance(seq_elem, str):
+                        # try matching text
+                        if remainder.startswith(seq_elem):
+                            new_forks.append((matched_so_far + seq_elem, remainder[len(seq_elem):]))
+                            continue
+                    elif isinstance(seq_elem, int):
+                        sub_matches = lib.match_ref(remainder, seq_elem)
+                        for matched, unmatched in sub_matches:
+                            if matched:
+                                new_forks.append((matched_so_far + matched, unmatched))
+                                continue
+                    
+                    # If we get here we didn't match an element in the sequence for
+                    # this fork. Therefore it won't be added to new_forks and will be
+                    # abandonded.
+                forks = new_forks
 
-            if matched_s:
-                matches.append((matched_s, temp_s))
+            # Any forks that are left at this stage are matches
+            matches += forks 
                 
         if matches:
-            if len(matches) == 1:
-                return matches[0]
-            else:
-                # Multiple matches!
-                # Try returning the longest.
-                matches = sorted(matches, key=lambda m: len(m[0]), reverse=True)
-                return matches[0]
-                #raise ValueError("Multiple Matches! {0}".format(matches))
-
-        # If we get here we didn't match any entirely
-        print(".........matchopt", s, option, "NO")
-        return "", s
+            return matches
+        else:
+            return [("", s)]
     
     def __repr__(self):
         return "<Matcher: {0}>".format(self.options)
@@ -118,13 +101,12 @@ for rule_set in test_rule_sets:
         print(".", test_str, lib.is_total_match_ref(test_str, 0))
 
 print("### For Reals...")
-for fname in ["019-messages-test.txt", "019-messages-test-2.txt"]: # "019-messages-input.txt"
+for fname in ["019-messages-test.txt", "019-messages-test-2.txt", "019-messages-input.txt"]:
     print(fname)
     with open(fname) as f:
         rules, tests = f.read().split("\n\n")
     lib = MatcherLibrary(rules)
-    # print(lib._rules)
-    #print(">> Matches:", lib.count_total_matches(tests.split('\n')))
+    print(">> Matches:", lib.count_total_matches(tests.split('\n')))
     # Part 1 answer: 192
 
     ## Part 2:
@@ -132,11 +114,5 @@ for fname in ["019-messages-test.txt", "019-messages-test-2.txt"]: # "019-messag
         print("> Part 2:")
         rules = rules.replace("11: 42 31", "11: 42 31 | 42 11 31").replace("8: 42", "8: 42 | 42 8")
         lib = MatcherLibrary(rules)
-        # NEEDED
-        # print(">> Matches:", lib.count_total_matches(tests.split('\n')))
-        print(lib.is_total_match_ref("aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba", 0))
-        
-
-
-
-
+        print(">> Matches:", lib.count_total_matches(tests.split('\n')))
+        # Part 2 answer: 296
