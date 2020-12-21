@@ -100,6 +100,8 @@ class Tile:
             else:
                 self.rows.append(line.strip())
         
+        self.size = (len(self.rows[0]), len(self.rows))
+        
         # NB: Clockwise.
         sides = [
             self.rows[0],  # Top rightwards
@@ -166,6 +168,7 @@ class TileSet:
         self.tiles = {}
         for raw_tile in raw_tiles:
             tile = Tile(raw_tile)
+            self.tile_size = tile.size
             self.tiles[tile.tile_no] = tile
     
     def find_links(self):
@@ -277,9 +280,29 @@ class TileSet:
                 break
 
             positioned_tiles[cur_tile] = pos.to_tuple()
-            print("placed", cur_tile , pos.to_tuple())
+            # print("placed", cur_tile , pos.to_tuple())
 
         return positioned_tiles
+    
+    def print_grid(self):
+        positions = self.position()
+        # Work out extents
+        extents = [
+            (min(elem[0] for elem in positions.values()), max(elem[0] for elem in positions.values())),
+            (min(elem[1] for elem in positions.values()), max(elem[1] for elem in positions.values()))
+        ]
+        invert_grid = {pos: tile for tile, pos in positions.items()}
+
+        for grid_y in range(extents[1][0], extents[1][1] + 1):
+            print(" ")
+            for row_idx in range(self.tile_size[1]):
+                row_buff = " "
+                for grid_x in range(extents[0][0], extents[0][1] + 1):
+                    tile_no = invert_grid[(grid_x, grid_y)]
+                    tile = self.tiles[tile_no]
+                    tile_row = tile.rows[row_idx]
+                    row_buff += tile_row + " "
+                print(row_buff)
 
     
     @staticmethod
@@ -290,9 +313,10 @@ class TileSet:
         return prod
 
 for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
-    print(fname)
+    print("fname", fname)
     ts = TileSet(fname)
     print(ts.find_corner_product())
     # Answer part 1: 59187348943703
-    print(ts.position())
+    ts.print_grid()
+    print("\n\n")
 
