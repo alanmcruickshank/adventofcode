@@ -8,8 +8,87 @@ Binary?
 """
 
 from collections import defaultdict
-from itertools import permutations
+from itertools import permutations, product
 
+
+class Vector:
+    def __init__(self, *vals):
+        self._vals = tuple(vals)
+    
+    def __len__(self):
+        return len(self._vals)
+
+    def __repr__(self):
+        return "<Vector[{0}] {1!r}>".format(len(self), self._vals)
+    
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+        return all(self._vals[n] == other._vals[n] for n in range(len(self._vals)))
+    
+    def __hash__(self):
+        return hash(self._vals)
+    
+    def copy(self):
+        return self.__class__(*self._vals)
+    
+    def rotate(self, r):
+        if r % 4 == 0:
+            return self.copy()
+        elif r % 4 == 1:
+            return self.__class__(self._vals[1], -self._vals[0])
+        elif r % 4 == 2:
+            return self.__class__(-self._vals[0], -self._vals[1])
+        elif r % 4 == 3:
+            return self.__class__(-self._vals[1], self._vals[0])
+
+    def __add__(self, other):
+        return self.__class__(*[
+            self._vals[idx] + other._vals[idx] for idx in range(len(self._vals))
+        ])
+    
+    def to_tuple(self):
+        return self._vals
+
+    @classmethod
+    def unit(cls, direction=0):
+        """Unit vector points at x=1, y=0"""
+        v = cls(1, 0)
+        return v.rotate(direction)
+    
+    @classmethod
+    def intersection_of(cls, points):
+        point_set = set(points)
+        point_list = list(point_set)
+        dimensions = len(point_list[0])
+        if len(point_set) in (0, 1) or len(point_set) > 4:
+            raise ValueError("Inappropriate number of points for intersection: {0}".format(len(point_set)))
+        else:
+            # Do any differ by anything other than 0 or 2?
+            p = []
+            for dim in range(dimensions):
+                opts_list = sorted(set(p[dim] for p in point_set))
+                if len(opts_list) not in (1, 2, 3):
+                    raise ValueError("Inappropriate options. {0} {1}".format(dim, opts_list))
+                if len(opts_list) == 3:
+                    # remove the middle one.
+                    opts_list.pop(1)
+                if len(opts_list) == 2:
+                    if abs(opts_list[0] - opts_list[1]) == 1:
+                        # We're going to have to deal with options
+                        p.append(opts_list)
+                    elif abs(opts_list[0] - opts_list[1]) != 2:
+                        raise ValueError("Inappropriate difference. {0} {1} {2}".format(dim, opts_list, point_set))
+                    else:
+                        p.append([(opts_list[0] + opts_list[1]) // 2])
+                else:
+                    p.append([opts_list[0]])
+
+        # Yield all the options.
+        for coords in product(*p):
+            point = cls(*coords)
+            if point.to_tuple() not in point_set:
+                yield point
 
 class Tile:
     def __init__(self, raw):
@@ -111,7 +190,7 @@ class TileSet:
             pruned_links[key] = links[key]
         return pruned_links
     
-    def assemble(self):
+    def link(self):
         pruned_links = self.pruned_links()
         # Doesn't really matter where we start.
         layout = {}
@@ -126,13 +205,82 @@ class TileSet:
                 neighbors[a].add(b)
         return neighbors
 
-    def find_corner_product(self):
-        neighbors = self.assemble()
+    @staticmethod
+    def find_corners(neighbors):
         corners = []
         for key in neighbors:
             if len(neighbors[key]) == 2:
                 corners.append(key)
-        return self.product(corners)
+        return corners
+
+    def find_corner_product(self):
+        neighbors = self.link()
+        return self.product(self.find_corners(neighbors))
+    
+    def position(self):
+        neighbors = self.link()
+        corners = self.find_corners(neighbors)
+        # Start in the first corner, building up an image.
+        # First position all the tiles on a grid.
+        positioned_tiles = {}
+        cur_tile = corners[0]
+        pos = Vector(0, 0)
+        positioned_tiles[cur_tile] = pos.to_tuple()
+        # Work along one side (assuming it's the top)
+        step = Vector.unit()
+        while True:
+            # find links to the corner tile.
+            linked_tiles = neighbors[cur_tile]
+            # Classify those linked tiles.
+            already_placed_links = []
+            linked_corners = []
+            linked_edges = []
+            linked_bulk = []
+            for tile_no in linked_tiles:
+                if tile_no in positioned_tiles:
+                    already_placed_links.append(tile_no)
+                elif len(neighbors[tile_no]) == 2:
+                    linked_corners.append(tile_no)
+                elif len(neighbors[tile_no]) == 3:
+                    linked_edges.append(tile_no)
+                else:
+                    linked_bulk.append(tile_no)
+
+            # If we have a corner, place it and rotate.
+            if linked_corners:
+                cur_tile = linked_corners[0]
+                pos += step
+                step = step.rotate(1)
+            # If we have edges, place one and move on.
+            elif linked_edges:
+                cur_tile = linked_edges[0]
+                pos += step
+            # No corners or edges
+            elif linked_bulk:
+                # Of the linked bulk tiles, find the one with the most
+                # placed neighbors.
+                placed_neighbors = {
+                    t: [l for l in neighbors[t] if l in positioned_tiles]
+                    for t in linked_bulk
+                }
+                _, cur_tile = sorted(((len(val), key) for key, val in placed_neighbors.items()), reverse=True)[0]
+                # Use the position of the others to place this tile.
+                potential_points = list(Vector.intersection_of([positioned_tiles[n] for n in placed_neighbors[cur_tile]]))
+                for point in potential_points:
+                    if point.to_tuple() not in positioned_tiles.values():
+                        pos = point
+                        break
+                else:
+                    raise RuntimeError("No appropriate point found!")
+            else:
+                # Nothing to place!
+                break
+
+            positioned_tiles[cur_tile] = pos.to_tuple()
+            print("placed", cur_tile , pos.to_tuple())
+
+        return positioned_tiles
+
     
     @staticmethod
     def product(iterable):
@@ -145,4 +293,6 @@ for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
     print(fname)
     ts = TileSet(fname)
     print(ts.find_corner_product())
+    # Answer part 1: 59187348943703
+    print(ts.position())
 
