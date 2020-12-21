@@ -47,6 +47,11 @@ class Vector:
             self._vals[idx] + other._vals[idx] for idx in range(len(self._vals))
         ])
     
+    def __sub__(self, other):
+        return self.__class__(*[
+            self._vals[idx] - other._vals[idx] for idx in range(len(self._vals))
+        ])
+    
     def to_tuple(self):
         return self._vals
 
@@ -56,6 +61,19 @@ class Vector:
         v = cls(1, 0)
         return v.rotate(direction)
     
+    def direction(self):
+        """inverse of unit"""
+        if self._vals[0] > 0 and self._vals[1] == 0:
+            return 0
+        elif self._vals[0] < 0 and self._vals[1] == 0:
+            return 2
+        elif self._vals[1] > 0 and self._vals[0] == 0:
+            return 1
+        elif self._vals[1] < 0 and self._vals[0] == 0:
+            return 3
+        else:
+            raise ValueError("Inappropriate vector to call direction on...")
+
     @classmethod
     def intersection_of(cls, points):
         point_set = set(points)
@@ -147,11 +165,15 @@ class Tile:
                 {'key': self.tilestring_to_int(s), 'tile': self, 'side': idx, 'hflip': hflip, 'vflip': vflip}
                 for idx, s in enumerate(side_keys)
             ]
-        
-        # A deduped set for searching?
-        # self.key_set = set(
-        #     key['key'] for key in self.keys
-        # )
+
+    def get_key_at(self, side, rot, hflip, vflip):
+        # first filter to the relevant items
+        filtered_keys = [key for key in self.keys if key['hflip'] == hflip and key['vflip'] == vflip]
+        for key in filtered_keys:
+            if key['side'] == (side - rot) % 4:
+                return key
+        else:
+            raise RuntimeError("Unable to find key!?")
 
     @staticmethod
     def tilestring_to_int(s):
@@ -159,6 +181,33 @@ class Tile:
     
     def __repr__(self):
         return "<Tile {0}: {1}>".format(self.tile_no, self.rows[0][:5])
+    
+    @staticmethod
+    def rotate_rows(rows):
+        """rotates by one step."""
+        new_rows = []
+        for x in range(len(rows[0])):
+            row = ""
+            for y in reversed(range(len(rows))):
+                row += rows[y][x]
+            new_rows.append(row)
+        return new_rows
+    
+    def oriented_content(self, r=0, hflip=False, vflip=False, trim=True):
+        rows = self.rows
+        # Trim the border
+        if trim:
+            rows = [row[1:-1] for row in rows[1:-1]]
+        # Horizontal Flip
+        if hflip:
+            rows = [row[::-1] for row in rows]
+        # Vertical Flip
+        if vflip:
+            rows = [row for row in reversed(rows)]
+        # Rotate (as many times as required)
+        for _ in range(r % 4):
+            rows = self.rotate_rows(rows)
+        return rows
 
 
 class TileSet:
@@ -193,8 +242,7 @@ class TileSet:
             pruned_links[key] = links[key]
         return pruned_links
     
-    def link(self):
-        pruned_links = self.pruned_links()
+    def link(self, pruned_links):
         # Doesn't really matter where we start.
         layout = {}
         available_tiles = list(self.tiles.keys())
@@ -217,11 +265,11 @@ class TileSet:
         return corners
 
     def find_corner_product(self):
-        neighbors = self.link()
+        pruned_links = self.pruned_links()
+        neighbors = self.link(pruned_links)
         return self.product(self.find_corners(neighbors))
     
-    def position(self):
-        neighbors = self.link()
+    def position(self, neighbors):
         corners = self.find_corners(neighbors)
         # Start in the first corner, building up an image.
         # First position all the tiles on a grid.
@@ -280,29 +328,86 @@ class TileSet:
                 break
 
             positioned_tiles[cur_tile] = pos.to_tuple()
-            # print("placed", cur_tile , pos.to_tuple())
 
         return positioned_tiles
     
+    @staticmethod
+    def invert_position_map(positions):
+        return {pos: tile for tile, pos in positions.items()}
+
+    def orient(self, positions, pruned_links, neighbors):
+        oriented_tiles = {}
+        # We don't have to orient in an order, because the positions
+        # determine the orientation.
+        invert_grid = self.invert_position_map(positions)
+        for tile_no in positions:
+            local_neighbor_positions = {t: positions[t] for t in neighbors[tile_no]}
+            local_neighbor_dirs = {t: Vector(*local_neighbor_positions[t]) - Vector(*positions[tile_no]) for t in neighbors[tile_no]}
+            # Plus one to line up with different cardinal directions.
+            local_neighbor_sides = {(local_neighbor_dirs[t].direction() + 1) % 4: t for t in neighbors[tile_no]}
+
+            local_links = []
+            for key in pruned_links:
+                for link in pruned_links[key]:
+                    if link['tile'].tile_no == tile_no:
+                        local_links.append(link)
+
+            # Try orientations until we find one that fits.
+            for r, hflip, vflip in product(range(4), [False, True], [False, True]):
+                for s in range(4):
+                    # Do we actually have a neighbor on that side.
+                    if s not in local_neighbor_sides:
+                        continue
+                    side_key = self.tiles[tile_no].get_key_at(s, r, hflip, vflip)
+                    # Is this a match with the keys of the neighbor tile?
+                    for key in pruned_links.get(side_key['key'], []):
+                        if key['tile'].tile_no == local_neighbor_sides[s]:
+                            break
+                    else:
+                        # We couldn't find a matching key.
+                        break
+                else:
+                    # We got to the end! it's a match.
+                    oriented_tiles[tile_no] = {'r': r, 'hflip': hflip, 'vflip': vflip}
+                    break
+            else:
+                raise RuntimeError("Could not orient tile!")
+        return oriented_tiles
+    
     def print_grid(self):
-        positions = self.position()
+        pruned_links = self.pruned_links()
+        neighbors = self.link(pruned_links)
+        positions = self.position(neighbors)
+        orientation = self.orient(positions, pruned_links, neighbors)
         # Work out extents
         extents = [
             (min(elem[0] for elem in positions.values()), max(elem[0] for elem in positions.values())),
             (min(elem[1] for elem in positions.values()), max(elem[1] for elem in positions.values()))
         ]
-        invert_grid = {pos: tile for tile, pos in positions.items()}
+        invert_grid = self.invert_position_map(positions)
 
+        oriented_tiles = {tn: self.tiles[tn].oriented_content(trim=True, **orientation[tn]) for tn in orientation}  #**orientation[tn]
+
+        # NB: Trimmed tiles, so range - 2
+        tile_width = self.tile_size[1] - 2
+
+        raw_rows = []
         for grid_y in range(extents[1][0], extents[1][1] + 1):
-            print(" ")
-            for row_idx in range(self.tile_size[1]):
+            tile_no_row = " "
+            for grid_x in range(extents[0][0], extents[0][1] + 1):
+                tile_no_row += str(invert_grid[(grid_x, grid_y)]).ljust(tile_width) + " "
+            print(tile_no_row)
+            for row_idx in range(tile_width):
                 row_buff = " "
+                raw_row_buff = ""
                 for grid_x in range(extents[0][0], extents[0][1] + 1):
                     tile_no = invert_grid[(grid_x, grid_y)]
-                    tile = self.tiles[tile_no]
-                    tile_row = tile.rows[row_idx]
+                    tile_row = oriented_tiles[tile_no][row_idx]
                     row_buff += tile_row + " "
+                    raw_row_buff += tile_row
                 print(row_buff)
+                raw_rows.append(raw_row_buff)
+        return raw_rows
 
     
     @staticmethod
@@ -312,11 +417,62 @@ class TileSet:
             prod *= elem
         return prod
 
+
+seamonster = [
+    "                  # ",
+    "#    ##    ##    ###",
+    " #  #  #  #  #  #   "
+]
+
+
+def search_for_seamonsters(grid):
+    grid_w = len(grid[0])
+    grid_h = len(grid)
+    sm_w = len(seamonster[0])
+    sm_h = len(seamonster)
+
+    total_hashes = sum(
+        row.count('#') for row in grid
+    )
+
+    monster_hashes = sum(
+        row.count('#') for row in seamonster
+    )
+
+    monsters = []
+    for x in range(grid_w - sm_w):
+        for y in range(grid_h - sm_h):
+            for dx in range(sm_w):
+                for dy in range(sm_h):
+                    if seamonster[dy][dx] != '#':
+                        continue
+                    elif grid[y + dy][x + dx] != '#':
+                        # No match with seamonsters.
+                        break
+                else:
+                    # We only get here if this row finished completely.
+                    continue
+                # We only get here if we failed a match.
+                break
+            else:
+                monsters.append((x, y))
+    # How many monsters did we find?
+    return total_hashes, monsters, total_hashes - (len(monsters) * monster_hashes)
+
+
 for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
     print("fname", fname)
     ts = TileSet(fname)
     print(ts.find_corner_product())
     # Answer part 1: 59187348943703
-    ts.print_grid()
+    combined_grid = ts.print_grid()
     print("\n\n")
-
+    for r in range(4):
+        _, monster_locs, roughness = search_for_seamonsters(combined_grid)
+        if monster_locs:
+            print("Found monsters:", monster_locs, "R", r, "roughness", roughness)
+            for row in combined_grid:
+                print(row)
+            print("\n\n")
+        # Rotate for next time.
+        combined_grid = Tile.rotate_rows(combined_grid)
