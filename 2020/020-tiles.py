@@ -470,7 +470,8 @@ for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
     for r in range(4):
         _, monster_locs, roughness = search_for_seamonsters(combined_grid)
         if monster_locs:
-            print("Found monsters:", monster_locs, "R", r, "roughness", roughness)
+            print("Found", len(monster_locs), "monsters:", monster_locs, "R", r, "roughness", roughness)
+            # Answer part 2: 1565  (with 36 monsters)
             for row in combined_grid:
                 print(row)
             print("\n\n")
