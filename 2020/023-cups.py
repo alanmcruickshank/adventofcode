@@ -2,138 +2,89 @@
 
 https://adventofcode.com/2020/day/23
 
-Cups
+Cups. Circular Linked Lists.
 """
 
-import cProfile
 
-
-class RingList:
-    def __init__(self, iterable):
-        self._vals = list(iterable)
+class DoubleLinkedElement:
+    __slots__ = ["val", "nxt", "prv"]
     
-    def __len__(self):
-        return len(self._vals)
-    
-    def __getitem__(self, key):
-        ring_len = len(self)
-        if isinstance(key, slice):
-            idx = key.start or 0
-            vals = []
-            while idx < key.stop:
-                vals.append(self[idx % ring_len])
-                idx += key.step or 1
-            return vals
-        else:
-            v = self._vals[key % ring_len]
-            return v
+    def __init__(self, val, nxt=None, prv=None):
+        self.val = val
+        self.nxt = nxt
+        self.prv = prv
     
     def __repr__(self):
-        return "<RingList {0!r}>".format(self._vals)
-    
-    def __contains__(self, val):
-        return val in self._vals
-    
-    def __iter__(self):
-        return iter(self._vals)
-    
-    def index(self, val):
-        return self._vals.index(val)
-    
-    def pop(self, idx):
-        ring_len = len(self)
-        return self._vals.pop(idx % ring_len)
-    
-    def pop_many(self, idx, n=1):
-        vals = []
-        ring_len = len(self)
-        # Shortcut, in some circumstances.
-        if idx + n < ring_len:
-            vals = self._vals[idx: idx + n]
-            self._vals = self._vals[:idx] + self._vals[idx + n:]
-            return vals
-
-        ring_len = len(self)
-        pop_point = idx % ring_len
-        for _ in range(n):
-            vals.append(self.pop(pop_point))
-            if pop_point >= len(self):
-                pop_point = 0
-        return vals
-    
-    def insert(self, idx, val):
-        ring_len = len(self)
-        self._vals.insert(idx % ring_len, val)
-    
-    def insert_many(self, idx, vals):
-        ring_len = len(self)
-        idx %= ring_len
-        self._vals = self._vals[:idx] + list(vals) + self._vals[idx:]
-    
-    def to_list(self, idx):
-        ring_len = len(self)
-        return [self[i] for i in range(idx, idx + ring_len)]
+        return "<DLE: [{1}<-] {0} [->{2}]>".format(
+            self.val,
+            self.prv.val if self.prv else "-",
+            self.nxt.val if self.nxt else "-",
+        )
 
 
-class CrabRing(RingList):
+class CircularIndexedLinkedList:
     def __init__(self, iterable):
-        super().__init__(iterable)
-        self._len = len(self._vals)
-        self._min = min(self._vals)
-        self._max = max(self._vals)
+        self._vals = {}
+        self.head = None
+        prv = None
+        # Set up elements
+        for val in iterable:
+            elem = DoubleLinkedElement(val, prv=prv)
+            self._vals[val] = elem
+            if not self.head:
+                self.head = elem
+            prv = elem
+        # When we get to the end, link forward to the head
+        # and then backward to the start.
+        elem.nxt = self.head
+        self.head.prv = elem
+        while elem is not self.head:
+            elem.prv.nxt = elem
+            elem = elem.prv
+        # Store the max value for later
+        self._max = max(self._vals.keys())
     
-    def __len__(self):
-        return self._len
+    def readout(self, head=None):
+        if head is None:
+            head = self.head
+        else:
+            head = self._vals[head]
+        yield head.val
+        pos = head.nxt
+        while pos != head:
+            yield pos.val
+            pos = pos.nxt
+    
+    def str_readout(self, head=None):
+        return "".join(str(elem) for elem in self.readout(head=head))
     
     def crab_move(self, current_cup):
-        # print("Pre Move:", self._vals, current_cup)
-        cup_idx = self._vals.index(current_cup)
-        # print(cup_idx)
-        picked_end_idx = cup_idx + 1
-        picked_start_idx = max(cup_idx + 4 - self._len, 0)
-        picked_end_slice = slice(picked_end_idx, min(picked_end_idx + 3, self._len))
-        picked_start_slice = slice(0, picked_start_idx)
-
-        picked_cups = self._vals[picked_end_slice] + self._vals[picked_start_slice]
-        # print(self._vals[picked_end_slice], self._vals[picked_start_slice])
-
+        # Current Cup
+        c_cup = self._vals[current_cup]
+        # Picked Cups (we only need references to the first and last)
+        first_picked = c_cup.nxt
+        last_picked = first_picked.nxt.nxt
+        post_picked = last_picked.nxt
+        picked_vals = set([first_picked.val, first_picked.nxt.val, last_picked.val])
+        # Work out the destination cup (and it's follower)
         dest_cup = current_cup - 1
-        if dest_cup in picked_cups:
-            dest_cup = min(picked_cups) - 1
-        if dest_cup < self._min:
-            dest_cup = self._max
-        while dest_cup in picked_cups:
+        while dest_cup not in self._vals or dest_cup in picked_vals:
             dest_cup -= 1
-        # print(current_cup, dest_cup)
-
-        dest_cup_idx = self._vals.index(dest_cup)
-        # print(dest_cup_idx, cup_idx)
-
-        if dest_cup_idx > cup_idx:
-            # print("A", self._vals[picked_start_idx:cup_idx + 1], self._vals[cup_idx + 4: dest_cup_idx + 1], picked_cups, self._vals[dest_cup_idx + 1:])
-            self._vals = self._vals[picked_start_idx:cup_idx + 1] + self._vals[cup_idx + 4: dest_cup_idx + 1] + picked_cups + self._vals[dest_cup_idx + 1:]
-        else:
-            # print("B", self._vals[picked_start_idx:dest_cup_idx + 1], picked_cups, self._vals[dest_cup_idx + 1: cup_idx + 1], self._vals[cup_idx + 4:])
-            self._vals = self._vals[picked_start_idx:dest_cup_idx + 1] + picked_cups + self._vals[dest_cup_idx + 1: cup_idx + 1] + self._vals[cup_idx + 4:]
-        # print(self._vals, dest_cup_idx)
-        return self[self.index(current_cup) + 1]
-
-    
-def crab_move(ring, current_cup):
-    # print("Pre Move:", ring[:10], current_cup)
-    cup_idx = ring.index(current_cup)
-    min_cup = min(cups)
-    max_cup = max(cups)
-    picked_cups = ring.pop_many(cup_idx + 1, n=3)
-    dest_cup = current_cup - 1
-    while dest_cup not in ring:
-        dest_cup -= 1
-        if dest_cup < min_cup:
-            dest_cup = max_cup
-    # print(picked_cups, dest_cup)
-    dest_cup_idx = ring.index(dest_cup)
-    ring.insert_many(dest_cup_idx + 1, picked_cups)
-    return ring, ring[ring.index(current_cup) + 1]
+            if dest_cup < 1:
+                dest_cup = self._max
+        d_cup = self._vals[dest_cup]
+        post_d_cup = d_cup.nxt
+        # SPLICE!
+        # 1. join up the gap we made
+        c_cup.nxt = post_picked
+        post_picked.prv = c_cup
+        # 2. Insert the picked cups after the destination cup.
+        d_cup.nxt = first_picked
+        first_picked.prv = d_cup
+        last_picked.nxt = post_d_cup
+        post_d_cup.prv = last_picked
+        # Return the new current cup.
+        return post_picked.val
 
 
 inputs = [
@@ -142,25 +93,23 @@ inputs = [
 ]
 
 for puzz in inputs:
-    print("Starting:", puzz)
-    cups = RingList(int(elem) for elem in puzz)  # CrabList
-    current_cup = cups[0]
+    print("Puzzle:", puzz)
+    pre_puzz = [int(elem) for elem in puzz]
+    cups = CircularIndexedLinkedList(pre_puzz)
+    current_cup = cups.head.val
+
+    print(". Part 1:", cups.str_readout(head=1), current_cup)
     for i in range(100):
-        # print("Move", i + 1, cups._vals)
-        # current_cup = cups.crab_move(current_cup)
-        cups, current_cup = crab_move(cups, current_cup)
-        
-    print(''.join(str(elem) for elem in cups.to_list(cups.index(1) + 1)))
+        current_cup = cups.crab_move(current_cup)
+    print("... Answer", cups.str_readout(head=1)[1:])
     # Part 1 answer: 38925764
     
     # Part 2. Try just iterating.
-    #pre_puzz = [int(elem) for elem in puzz]
-    #cups = RingList(pre_puzz + list(range(max(pre_puzz) + 1, 1000000 + 1)))
-    #current_cup = cups[0]
-    #with cProfile.Profile() as pr:
-    #    for i in range(100):
-    #        cups, current_cup = crab_move(cups, current_cup)
-    #pr.print_stats()
-    #cup1_idx = cups.index(1)
-    #v1, v2 = cups[cup1_idx + 1], cups[cup1_idx + 2]
-    #print(v1, v1, v1 * v2)
+    print(". Part 2:", puzz)
+    cups = CircularIndexedLinkedList(pre_puzz + list(range(max(pre_puzz) + 1, 1000000 + 1)))
+    current_cup = cups.head.val
+    for i in range(10000000):
+        current_cup = cups.crab_move(current_cup)
+    v1, v2 = cups._vals[1].nxt.val, cups._vals[1].nxt.nxt.val
+    print("... Answer:", v1, v2, v1 * v2)
+    # Part 2 answer: 131152940564
