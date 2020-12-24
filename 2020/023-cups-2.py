@@ -75,7 +75,6 @@ class CircularIndexedLinkedList:
         d_cup = self._vals[dest_cup]
         post_d_cup = d_cup.nxt
         # SPLICE!
-        ###print(c_cup, first_picked, last_picked, post_picked, d_cup, post_d_cup, picked_vals)
         # 1. join up the gap we made
         c_cup.nxt = post_picked
         post_picked.prv = c_cup
@@ -94,28 +93,23 @@ inputs = [
 ]
 
 for puzz in inputs:
-    print("Starting:", puzz)
-    cups = CircularIndexedLinkedList(int(elem) for elem in puzz)  # CrabList
+    print("Puzzle:", puzz)
+    pre_puzz = [int(elem) for elem in puzz]
+    cups = CircularIndexedLinkedList(pre_puzz)
     current_cup = cups.head.val
 
-    print(". Starting", cups.str_readout(head=1), current_cup)
+    print(". Part 1:", cups.str_readout(head=1), current_cup)
     for i in range(100):
         current_cup = cups.crab_move(current_cup)
-    print(". Final", cups.str_readout(head=1)[1:])
-    # Part 1 answer: 38925764
-
-    #    
-    #print(''.join(str(elem) for elem in cups.to_list(cups.index(1) + 1)))
+    print("... Answer", cups.str_readout(head=1)[1:])
     # Part 1 answer: 38925764
     
     # Part 2. Try just iterating.
-    #pre_puzz = [int(elem) for elem in puzz]
-    #cups = RingList(pre_puzz + list(range(max(pre_puzz) + 1, 1000000 + 1)))
-    #current_cup = cups[0]
-    #with cProfile.Profile() as pr:
-    #    for i in range(100):
-    #        cups, current_cup = crab_move(cups, current_cup)
-    #pr.print_stats()
-    #cup1_idx = cups.index(1)
-    #v1, v2 = cups[cup1_idx + 1], cups[cup1_idx + 2]
-    #print(v1, v1, v1 * v2)
+    print(". Part 2:", puzz)
+    cups = CircularIndexedLinkedList(pre_puzz + list(range(max(pre_puzz) + 1, 1000000 + 1)))
+    current_cup = cups.head.val
+    for i in range(10000000):
+        current_cup = cups.crab_move(current_cup)
+    v1, v2 = cups._vals[1].nxt.val, cups._vals[1].nxt.nxt.val
+    print("... Answer:", v1, v2, v1 * v2)
+    # Part 2 answer: 131152940564
