@@ -5,6 +5,22 @@ https://adventofcode.com/2020/day/20
 Image borders.
 
 A more compact implementation.
+Could use bitarray to do this in a more
+memory efficient way, but the equivalent
+method can be done using lists.
+
+No 2d arrays, just a long 1d array, but
+with clever slicing to make it look seamless
+under the hood and deal with comparisons and
+matching. Where we do matching, they should
+be done WITHOUT type conversion and to
+compare the lists directly.
+
+For this implementation, we'll use lists
+of integers. We'll need to implement functions
+to do element-wise comparisons and operations.
+This could be done using a class, but functions
+will be swifter here.
 """
 
 from collections import defaultdict
@@ -24,6 +40,77 @@ def direction_of(c):
     else:
         raise ValueError("Direction not found.")
 
+
+class BinaryGrid:
+    def __init__(self, rows, row_bit_length=None):
+        # Assume rows is an array of integers.
+        self._rows = rows
+        self.height = len(self._rows)
+        self.width = row_bit_length or max(self.bitlen(row) for row in self._rows)
+    
+    @staticmethod
+    def bitlen(int_type):
+        """Get the bit length of an integer."""
+        length = 0
+        while int_type:
+            int_type >>= 1
+            length += 1
+        return length
+    
+    @staticmethod
+    def posbits(int_type):
+        """Counts the positive bit of an integer."""
+        count = 0
+        while int_type:
+            count += int_type & 1
+            int_type >>= 1
+        return count
+    
+    def col(self, idx, inv=False):
+        """Get a column as an integer.
+        
+        Reads bits vertically downward (unless inverted).
+        """
+        val = 0
+        for i in range(self.height):
+            bit = i if inv else self.height - i
+            val += ((self._rows[i] >> (self.width - idx)) % 2) * (2**bit)
+        return val
+    
+    def row(self, idx, inv=False):
+        """Get a row as an integer.
+        
+        Reads bits vertically downward (unless inverted).
+        """
+        val = self._rows[idx]
+        if inv:
+            print([((val >> (self.width - bit)) % 2) * (2**bit) for bit in range(self.width)])
+            return sum(((val >> (self.width - bit)) % 2) * (2**bit) for bit in range(self.width))
+        else:
+            return val
+
+
+for i in [1,2,3,4,5,6,7,8,32,128]:
+    print(i, BinaryGrid.bitlen(i), BinaryGrid.posbits(i))
+
+# 111
+# 010
+# 110
+
+g = BinaryGrid(rows=[7, 2, 6])
+print(g.width)
+
+for i in range(3):
+    print(i, g.row(i))
+
+for i in range(3):
+    print(i, g.col(i))
+
+for i in range(3):
+    print(i, g.row(i, inv=True))
+
+for i in range(3):
+    print(i, g.col(i, inv=True))
 
 class Tile:
     def __init__(self, raw):
