@@ -35,6 +35,9 @@ DIRECTIONS = [complex(0, 1)**i for i in range(4)]
 
 
 class Tile:
+
+    direction_slices = {1j: (slice(None), 0), -1: (0, slice(None)), -1j: (slice(None), -1), 1: (-1, slice(None))}
+
     def __init__(self, vals, width):
         """2D Array of integers.
 
@@ -66,9 +69,11 @@ class Tile:
                 return self._vals[(y_key * self.width) + x_key]
             # An X slice means we're returning a row (or part of it)
             elif isinstance(x_key, slice) and isinstance(y_key, int):
+                y_key = self.height + y_key if y_key < 0  else y_key  # Deal with potential negative
                 return self._vals[y_key * self.width: (y_key + 1) * self.width][x_key]
             # An Y slice means we're returning a column (or part of it)
             elif isinstance(y_key, slice) and isinstance(x_key, int):
+                x_key = self.width + x_key if x_key < 0  else x_key  # Deal with potential negative
                 return self._vals[x_key: None: self.width][y_key]
             # A double slice means returning a subtile
             else:
@@ -96,6 +101,15 @@ class Tile:
             new_vals += reversed(self[col, :])
         return self.__class__(vals=new_vals, width=self.height)
     
+    def _flip(self):
+        """Flips vertically.
+        
+        NB: We only need to implement one flip, because we can get the other with rotation."""
+        new_vals = []
+        for row in reversed(list(self.iterrows())):
+            new_vals += row
+        return self.__class__(new_vals, width=self.width)
+    
     def copy(self):
         return self.__class__(vals=self._vals.copy(), width=self.width)
         
@@ -104,13 +118,40 @@ class Tile:
         for _ in range(steps % 4):
             new_tile = new_tile._rotate()
         return new_tile
+    
+    def iter_transforms(self):
+        """Iterate through all the potential orientations."""
+        new_tile = self.copy()
+        for _ in range(4):
+            yield new_tile
+            new_tile = new_tile._rotate()
+        new_tile = new_tile._flip()
+        for _ in range(4):
+            yield new_tile
+            new_tile = new_tile._rotate()
+    
+    def sides(self):
+        return {key: self[self.direction_slices[key]] for key in self.direction_slices}
+    
+    def side(self, side):
+        """Get the side (as defined by a complex direction)"""
+        return self[self.direction_slices[side]]
         
     def __repr__(self):
         return "<Tile {0}x{1}: {2}...>".format(self.width, self.height, ','.join(str(elem) for elem in self._vals[:6]))
 
 
 class TileSet:
-    """A set of tiles."""
+    """A set of tiles.
+    
+    Tiles are stored in a dict referencing their number.
+    """
+    # Define a seamonster
+    seamonster = Tile(
+        [int(elem) for elem in "000000000000000000101000011000011000011101001001001001001000"],
+        width=20
+    )
+
     def __init__(self, fname):
         with open(fname) as f:
             raw_tiles = f.read().split("\n\n")
@@ -124,23 +165,93 @@ class TileSet:
             tile = Tile(tile_content, width=len(first_row))
             self.tiles[tile_no] = tile
 
+    @staticmethod
+    def calc_open_positions(tile_positions):
+        open_positions = set()
+        # Work out all the neighbors
+        for pos in tile_positions:
+            for d in DIRECTIONS:
+                open_positions.add(pos + d)
+        # Remove any taken positions
+        open_positions -= set(tile_positions.keys())
+        return open_positions
+
+    def position(self):
+        """Position tiles, starting at an arbitrary point."""
+        # Make a buffer of tiles to work through.
+        available_tiles = self.tiles.copy()
+        # Pick a tile to start with arbitrarily, and put it at the origin.
+        starting_tile_no, _ = available_tiles.popitem()
+        # Keep track of which tiles we've tried in which positions.
+        tried_positions = defaultdict(list)
+        # Keep track of any positions we've set.
+        tile_positions = {complex(0, 0): starting_tile_no}
+        # Loop until golden brown.
+        while available_tiles:
+            open_positions = self.calc_open_positions(tile_positions)
+            # Work out the constraints on each open position
+            open_constraints = defaultdict(dict)
+            for open_pos in open_positions:
+                for d in DIRECTIONS:
+                    if open_pos + d in tile_positions:
+                        open_constraints[open_pos][d] = self.tiles[tile_positions[open_pos + d]].side(-d)
+            # Pick a tile.
+            for tile_no, tile in available_tiles.items():
+                # Pick an open position.
+                for pos in open_positions:
+                    # Have we tried this already?
+                    if pos in tried_positions[tile_no]:
+                        print("a")
+                        continue
+                    # Try each orientation
+                    for oriented_tile in tile.iter_transforms():
+                        # Does it match?
+                        sides = oriented_tile.sides()
+                        for d in open_constraints[pos]:
+                            if open_constraints[pos][d] != sides[d]:
+                                # Not match
+                                break
+                        else:
+                            # All match!
+                            matched_tile = oriented_tile
+                            matched_pos = pos
+                            break
+                        # Try next orientation.
+                        continue
+                    else:
+                        # No match, next position...
+                        continue
+                    # found match!
+                    break
+                else:
+                    # No match, try another tile
+                    continue
+                # Found a match!
+                break
+            else:
+                raise RuntimeError("No match found!? Can't make a move.")
+            # Orient the saved tile
+            self.tiles[tile_no] = matched_tile
+            del available_tiles[tile_no]
+            tile_positions[matched_pos] = tile_no
+
+        # Normalise so that the bottom left is at 0,0
+        offset = complex(min(e.real for e in tile_positions), min(e.imag for e in tile_positions))
+        tile_positions = {key - offset: tile_positions[key] for key in tile_positions}
+        corner = complex(max(e.real for e in tile_positions), max(e.imag for e in tile_positions))
+        return {
+            'positions': tile_positions,
+            'corner': corner,
+            'corner_product': tile_positions[0] * tile_positions[corner] * tile_positions[corner.real] * tile_positions[corner.imag * 1j]
+        }
 
 
 for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
     print("fname", fname)
-    t = Tile(list(range(16)), width=4)
-    print(t[0])
-    print(t[0:])
-    print(t[1,1])
-    print(t[1:3,1:3])
-    print(t[:,2])
-    print(t[2,:])
-    print(t[1:3,1:3].rotate(1))
-    print(t[1:3,1:3].rotate(2))
-    print(t[1:-1,2])
-    print(t[2,1:-1])
-    print(t[1:-1,1:-1])
     ts = TileSet(fname)
-    print(ts.tiles)
-
-    
+    positions = ts.position()
+    print("Part 1 Answer:", positions['corner_product'])
+    # Answer part 1: 59187348943703
+    #print(ts.seamonster)
+    #for row in ts.seamonster.iterrows():
+    #    print(''.join(str(elem) for elem in row))
