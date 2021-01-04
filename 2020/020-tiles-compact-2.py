@@ -139,6 +139,25 @@ class Tile:
         
     def __repr__(self):
         return "<Tile {0}x{1}: {2}...>".format(self.width, self.height, ','.join(str(elem) for elem in self._vals[:6]))
+    
+    def sum(self):
+        return sum(self._vals)
+    
+    def __mul__(self, other):
+        if self.length != other.length or self.width != other.width:
+            raise ValueError("Cannot multipy tiles of different sizes.")
+        new_vals = [self._vals[i] * other._vals[i] for i in range(self.length)]
+        return self.__class__(new_vals, width=self.width)
+    
+    def search(self, other):
+        signature = other.sum()
+        locs = []
+        for x in range(self.width - other.width):
+            for y in range(self.height - other.height):
+                panel = self[x : x + other.width, y : y + other.height]
+                if (panel * other).sum() == signature:
+                    locs.append(complex(x, self.height - y))
+        return locs
 
 
 class TileSet:
@@ -146,11 +165,6 @@ class TileSet:
     
     Tiles are stored in a dict referencing their number.
     """
-    # Define a seamonster
-    seamonster = Tile(
-        [int(elem) for elem in "000000000000000000101000011000011000011101001001001001001000"],
-        width=20
-    )
 
     def __init__(self, fname):
         with open(fname) as f:
@@ -201,7 +215,6 @@ class TileSet:
                 for pos in open_positions:
                     # Have we tried this already?
                     if pos in tried_positions[tile_no]:
-                        print("a")
                         continue
                     # Try each orientation
                     for oriented_tile in tile.iter_transforms():
@@ -225,6 +238,7 @@ class TileSet:
                     break
                 else:
                     # No match, try another tile
+                    tried_positions[tile_no].append(pos)
                     continue
                 # Found a match!
                 break
@@ -239,11 +253,28 @@ class TileSet:
         offset = complex(min(e.real for e in tile_positions), min(e.imag for e in tile_positions))
         tile_positions = {key - offset: tile_positions[key] for key in tile_positions}
         corner = complex(max(e.real for e in tile_positions), max(e.imag for e in tile_positions))
+
+        # Join the tiles together (trimmed), to make a big one.
+        joined_vals = []
+        for i in range(int(corner.imag) + 1):
+            for j in range(1, self.tiles[starting_tile_no].height - 1):
+                for k in range(int(corner.real) + 1):
+                    joined_vals += self.tiles[tile_positions[complex(k, corner.imag - i)]][1:-1, j]
+        joined_tile = Tile(vals=joined_vals, width=(self.tiles[starting_tile_no].width - 2) * (int(corner.real) + 1))
+    
         return {
             'positions': tile_positions,
             'corner': corner,
-            'corner_product': tile_positions[0] * tile_positions[corner] * tile_positions[corner.real] * tile_positions[corner.imag * 1j]
+            'corner_product': tile_positions[0] * tile_positions[corner] * tile_positions[corner.real] * tile_positions[corner.imag * 1j],
+            'joined_tile': joined_tile
         }
+
+
+# Define a seamonster
+seamonster = Tile(
+    [int(elem) for elem in "000000000000000000101000011000011000011101001001001001001000"],
+    width=20
+)
 
 
 for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
@@ -252,6 +283,10 @@ for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
     positions = ts.position()
     print("Part 1 Answer:", positions['corner_product'])
     # Answer part 1: 59187348943703
-    #print(ts.seamonster)
-    #for row in ts.seamonster.iterrows():
-    #    print(''.join(str(elem) for elem in row))
+
+    for oriented_tile in positions['joined_tile'].iter_transforms():
+        locs = oriented_tile.search(seamonster)
+        if len(locs) > 0:
+            print("Found {0} monsters. Roughness [part 2 answer]: {1}".format(len(locs), oriented_tile.sum() - (len(locs) * seamonster.sum())))
+            break
+    # Answer part 2: 1565
