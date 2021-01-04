@@ -28,7 +28,7 @@ values.
 """
 
 from collections import defaultdict
-from itertools import permutations, product
+from itertools import product
 
 # Use enumerate to get the index if needed.
 DIRECTIONS = [complex(0, 1)**i for i in range(4)]
@@ -48,7 +48,8 @@ class Tile:
         self.length = len(self._vals)
         self.width = width
         if self.length % self.width != 0:
-            raise ValueError("Length of vals is not an integer multiple length of width ({0}, {1})".format(self.length, self.width))
+            raise ValueError("Length of vals is not an integer multiple length of width ({0}, {1})".format(
+                self.length, self.width))
         self.height = self.length // self.width
     
     def iterrows(self):
@@ -138,7 +139,8 @@ class Tile:
         return self[self.direction_slices[side]]
         
     def __repr__(self):
-        return "<Tile {0}x{1}: {2}...>".format(self.width, self.height, ','.join(str(elem) for elem in self._vals[:6]))
+        return "<Tile {0}x{1}: {2}...>".format(
+            self.width, self.height, ','.join(str(elem) for elem in self._vals[:6]))
     
     def sum(self):
         return sum(self._vals)
@@ -209,42 +211,29 @@ class TileSet:
                 for d in DIRECTIONS:
                     if open_pos + d in tile_positions:
                         open_constraints[open_pos][d] = self.tiles[tile_positions[open_pos + d]].side(-d)
-            # Pick a tile.
-            for tile_no, tile in available_tiles.items():
-                # Pick an open position.
-                for pos in open_positions:
-                    # Have we tried this already?
-                    if pos in tried_positions[tile_no]:
-                        continue
-                    # Try each orientation
-                    for oriented_tile in tile.iter_transforms():
-                        # Does it match?
-                        sides = oriented_tile.sides()
-                        for d in open_constraints[pos]:
-                            if open_constraints[pos][d] != sides[d]:
-                                # Not match
-                                break
-                        else:
-                            # All match!
-                            matched_tile = oriented_tile
-                            matched_pos = pos
-                            break
-                        # Try next orientation.
-                        continue
-                    else:
-                        # No match, next position...
-                        continue
-                    # found match!
-                    break
+            # Pick a tile and open position
+            for tile_no, pos in product(available_tiles.keys(), open_positions):
+                # Have we tried this already? If not, mark it.
+                if pos in tried_positions[tile_no]:
+                    continue
+                tried_positions[tile_no].append(pos)
+                # Try each orientation
+                for oriented_tile in self.tiles[tile_no].iter_transforms():
+                    # Does it match on all sides?
+                    sides = oriented_tile.sides()
+                    if all(open_constraints[pos][d] == sides[d] for d in open_constraints[pos]):
+                        matched_tile = oriented_tile
+                        matched_pos = pos
+                        break
                 else:
-                    # No match, try another tile
-                    tried_positions[tile_no].append(pos)
+                    # No match, next combination...
                     continue
                 # Found a match!
                 break
             else:
                 raise RuntimeError("No match found!? Can't make a move.")
-            # Orient the saved tile
+
+            # Orient the saved tile (and remove from the working set).
             self.tiles[tile_no] = matched_tile
             del available_tiles[tile_no]
             tile_positions[matched_pos] = tile_no
@@ -260,7 +249,10 @@ class TileSet:
             for j in range(1, self.tiles[starting_tile_no].height - 1):
                 for k in range(int(corner.real) + 1):
                     joined_vals += self.tiles[tile_positions[complex(k, corner.imag - i)]][1:-1, j]
-        joined_tile = Tile(vals=joined_vals, width=(self.tiles[starting_tile_no].width - 2) * (int(corner.real) + 1))
+        joined_tile = Tile(
+            vals=joined_vals,
+            width=(self.tiles[starting_tile_no].width - 2) * (int(corner.real) + 1)
+        )
     
         return {
             'positions': tile_positions,
@@ -287,6 +279,7 @@ for fname in ["020-tiles-1.txt", "020-tiles-2.txt"]:
     for oriented_tile in positions['joined_tile'].iter_transforms():
         locs = oriented_tile.search(seamonster)
         if len(locs) > 0:
-            print("Found {0} monsters. Roughness [part 2 answer]: {1}".format(len(locs), oriented_tile.sum() - (len(locs) * seamonster.sum())))
+            print("Found {0} monsters. Roughness [part 2 answer]: {1}".format(
+                len(locs), oriented_tile.sum() - (len(locs) * seamonster.sum())))
             break
     # Answer part 2: 1565
