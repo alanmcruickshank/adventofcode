@@ -154,11 +154,10 @@ class Tile:
     def search(self, other):
         signature = other.sum()
         locs = []
-        for x in range(self.width - other.width):
-            for y in range(self.height - other.height):
-                panel = self[x : x + other.width, y : y + other.height]
-                if (panel * other).sum() == signature:
-                    locs.append(complex(x, self.height - y))
+        for x, y in product(range(self.width - other.width), range(self.height - other.height)):
+            panel = self[x : x + other.width, y : y + other.height]
+            if (panel * other).sum() == signature:
+                locs.append(complex(x, self.height - y))
         return locs
 
 
@@ -183,14 +182,12 @@ class TileSet:
 
     @staticmethod
     def calc_open_positions(tile_positions):
-        open_positions = set()
-        # Work out all the neighbors
-        for pos in tile_positions:
-            for d in DIRECTIONS:
-                open_positions.add(pos + d)
-        # Remove any taken positions
-        open_positions -= set(tile_positions.keys())
-        return open_positions
+        return (
+            # Work out all the neighbors
+            set(pos + d for pos, d in product(tile_positions, DIRECTIONS))
+            # Remove any taken positions
+            - set(tile_positions.keys())
+        )
 
     def position(self):
         """Position tiles, starting at an arbitrary point."""
@@ -206,11 +203,13 @@ class TileSet:
         while available_tiles:
             open_positions = self.calc_open_positions(tile_positions)
             # Work out the constraints on each open position
-            open_constraints = defaultdict(dict)
-            for open_pos in open_positions:
-                for d in DIRECTIONS:
-                    if open_pos + d in tile_positions:
-                        open_constraints[open_pos][d] = self.tiles[tile_positions[open_pos + d]].side(-d)
+            open_constraints = {
+                open_pos: {
+                    d: self.tiles[tile_positions[open_pos + d]].side(-d)
+                    for d in DIRECTIONS if open_pos + d in tile_positions
+                }
+                for open_pos in open_positions
+            }
             # Pick a tile and open position
             for tile_no, pos in product(available_tiles.keys(), open_positions):
                 # Have we tried this already? If not, mark it.
