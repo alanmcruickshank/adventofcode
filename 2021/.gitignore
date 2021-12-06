@@ -1,0 +1,6 @@
+# Ignore compiled code
+*.exe
+
+# Ignore partially compiled haskell
+*.hi
+*.o
