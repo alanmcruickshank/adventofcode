@@ -1,7 +1,7 @@
 import System.IO
 
 main = do
-    f <- readFile "002-input.txt"
+    f <- readFile "day-02-input.txt"
     -- Get the lines and convert to instructions
     let l = map line_to_instruction (lines f)
     -- Fold the list by adding them, starting at 0,0

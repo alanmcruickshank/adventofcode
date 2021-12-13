@@ -1,7 +1,7 @@
 import System.IO
 
 main = do
-    f <- readFile "001-input.txt"
+    f <- readFile "day-01-input.txt"
     -- Get the lines and convert to integer
     let l = map read (lines f)::[Integer]
     -- Zip up the lines with itself (minus one) to compare pairs

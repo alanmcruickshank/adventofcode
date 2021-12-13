@@ -1,7 +1,7 @@
 import System.IO
 
 main = do
-    f <- readFile "002-input.txt"
+    f <- readFile "day-02-input.txt"
     -- Get the lines and convert to vectors
     let l = map instruction_to_vector (lines f)
     print (head l)
