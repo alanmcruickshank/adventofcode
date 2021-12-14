@@ -31,4 +31,4 @@ split_comma_seperated s             = a
           f (b, c, ',':xs)          = f (b ++ [read c::Int], "", xs)
           f (b, c, x:xs)            = f (b, c ++ [x], xs)
 
-process_raw_card s                  = map ((map (\x -> read x::Int)).words) (lines s)
+process_raw_card s                  = (concat.(map ((map (\x -> read x::Int)).words)).lines) s
