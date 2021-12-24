@@ -1,5 +1,7 @@
 -- Advent of code. Day 4.
 
+import Data.List
+
 main = do
     f <- readFile "day-04-example.txt"
     print "=== Part 1"
@@ -8,6 +10,17 @@ main = do
     let cards = map process_raw_card (tail sections)
     print call_order
     print cards
+    let card1_order = call_order_to_indices call_order (cards !! 0)
+    print card1_order
+    print (zip card1_order [0..])
+    let card1_indices = zip card1_order [0..]
+    print card1_indices
+    let filtered_indices = removeif has_null_pos card1_indices
+    print filtered_indices
+    print (map idx_pair_conv filtered_indices)
+    print (map (pair_to_list.idx_pair_conv) filtered_indices)
+    print (foldl1 (++) (map (pair_to_list.idx_pair_conv) filtered_indices))
+
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
 split_step                          :: ([String], String, String) -> ([String], String, String)
@@ -32,3 +45,29 @@ split_comma_seperated s             = a
           f (b, c, x:xs)            = f (b, c ++ [x], xs)
 
 process_raw_card s                  = (concat.(map ((map (\x -> read x::Int)).words)).lines) s
+
+-- Given a list of called numbers, evaluate when a card will win, and the score at that point.
+
+-- Notes:
+--  Need to turn numbers to indices.
+call_order_to_indices               :: [Int] -> [Int] -> [Maybe Int]
+call_order_to_indices call crd      = map (\x -> elemIndex x crd) call
+
+index_to_rc                         :: Int -> (Int, Int)  -- (row, col)
+index_to_rc x                       = (div x 5, mod x 5)
+
+removeif                            :: (a -> Bool) -> [a] -> [a]
+removeif func []                    = []
+removeif func (h:t)                 = if func h then removeif func t else h:(removeif func t)
+
+has_null_pos                        :: (Maybe Int, Int) -> Bool
+has_null_pos (Nothing, _)           = True
+has_null_pos (a, _)                 = False
+
+idx_pair_conv                       :: (Maybe Int, Int) -> (Maybe (Int, Int), Int)
+idx_pair_conv (Nothing, a)          = (Nothing, a)
+idx_pair_conv (Just x, a)           = (Just (index_to_rc x), a)
+
+pair_to_list                        :: (Maybe (Int, Int), Int) -> [(String, Int)]
+pair_to_list (Nothing, _)           = []
+pair_to_list (Just (r, c), x)            = [("r" ++ (show r),x), ("c" ++ (show c),x)]
