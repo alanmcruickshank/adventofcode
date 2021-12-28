@@ -12,23 +12,16 @@ main = do
     let cards = Data.List.map process_raw_card (tail sections)
     print call_order
     print cards
-    let card1_order = call_order_to_indices call_order (cards !! 0)
-    print card1_order
-    print (zip card1_order [0..])
-    let card1_indices = zip card1_order [0..]
-    print card1_indices
-    let filtered_indices = removeif has_null_pos card1_indices
-    print filtered_indices
-    print (Data.List.map idx_pair_conv filtered_indices)
-    print (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices)
-    print (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
-    let concatd = (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
-    print concatd
-    let col_row_map = addr_list_to_map concatd
-    print col_row_map
-    let col_row_complete = Data.Map.map reduce_list col_row_map
-    print col_row_complete
-    print (reduce_map col_row_complete)
+    let card_orders = Data.List.map (\x -> call_order_to_indices call_order x) cards
+    print (Data.List.map card_win card_orders)
+
+card_win                            :: [Maybe Int] -> Maybe (String, Int)
+card_win card_order                 = reduce_map col_row_complete
+    where card_indices              = zip card_order [0..]
+          filtered_indices          = removeif has_null_pos card_indices
+          concatd                   = (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
+          col_row_map               = addr_list_to_map concatd
+          col_row_complete          = Data.Map.map reduce_list col_row_map
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
 split_step                          :: ([String], String, String) -> ([String], String, String)
