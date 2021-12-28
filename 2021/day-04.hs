@@ -1,7 +1,7 @@
 -- Advent of code. Day 4.
 
 import Data.List
-import Data.Map (Map, lookup, insert, empty)
+import Data.Map (Map, lookup, insert, empty, map, foldrWithKey)
 import Data.Maybe (fromJust)
 
 main = do
@@ -9,7 +9,7 @@ main = do
     print "=== Part 1"
     let sections = split_sections f
     let call_order = split_comma_seperated (head sections)
-    let cards = map process_raw_card (tail sections)
+    let cards = Data.List.map process_raw_card (tail sections)
     print call_order
     print cards
     let card1_order = call_order_to_indices call_order (cards !! 0)
@@ -19,13 +19,16 @@ main = do
     print card1_indices
     let filtered_indices = removeif has_null_pos card1_indices
     print filtered_indices
-    print (map idx_pair_conv filtered_indices)
-    print (map (pair_to_list.idx_pair_conv) filtered_indices)
-    print (foldl1 (++) (map (pair_to_list.idx_pair_conv) filtered_indices))
-    let concatd = (foldl1 (++) (map (pair_to_list.idx_pair_conv) filtered_indices))
+    print (Data.List.map idx_pair_conv filtered_indices)
+    print (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices)
+    print (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
+    let concatd = (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
     print concatd
-    print (addr_list_to_map concatd)
-
+    let col_row_map = addr_list_to_map concatd
+    print col_row_map
+    let col_row_complete = Data.Map.map reduce_list col_row_map
+    print col_row_complete
+    print (reduce_map col_row_complete)
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
 split_step                          :: ([String], String, String) -> ([String], String, String)
@@ -49,14 +52,14 @@ split_comma_seperated s             = a
           f (b, c, ',':xs)          = f (b ++ [read c::Int], "", xs)
           f (b, c, x:xs)            = f (b, c ++ [x], xs)
 
-process_raw_card s                  = (concat.(map ((map (\x -> read x::Int)).words)).lines) s
+process_raw_card s                  = (concat.(Data.List.map ((Data.List.map (\x -> read x::Int)).words)).lines) s
 
 -- Given a list of called numbers, evaluate when a card will win, and the score at that point.
 
 -- Notes:
 --  Need to turn numbers to indices.
 call_order_to_indices               :: [Int] -> [Int] -> [Maybe Int]
-call_order_to_indices call crd      = map (\x -> elemIndex x crd) call
+call_order_to_indices call crd      = Data.List.map (\x -> elemIndex x crd) call
 
 index_to_rc                         :: Int -> (Int, Int)  -- (row, col)
 index_to_rc x                       = (div x 5, mod x 5)
@@ -86,3 +89,16 @@ update_map_with_addr map (k, v)     = Data.Map.insert k nl map
 
 addr_list_to_map                    :: [(String, Int)] -> Map String [Int]
 addr_list_to_map al                 = foldl update_map_with_addr Data.Map.empty al
+
+reduce_list                         :: [Int] -> Maybe Int
+reduce_list []                      = Nothing
+reduce_list (a:b:c:d:e:xs)          = Just(maximum (a:b:c:d:e:[]))
+reduce_list (a:xs)                  = Nothing
+
+reduce_map                              :: Map String (Maybe Int) -> Maybe (String, Int)
+reduce_map m                            = foldrWithKey reduce_map' Nothing m
+    where reduce_map'                           :: String -> Maybe Int -> Maybe (String, Int) -> Maybe (String, Int)
+          reduce_map' k Nothing Nothing         = Nothing
+          reduce_map' k a Nothing               = Just (k, (fromJust a))
+          reduce_map' k Nothing (Just (kb, b))  = Just (kb, b) 
+          reduce_map' k a (Just (kb, b))        = if (fromJust a) < b then Just (k, (fromJust a)) else Just (k, b)
