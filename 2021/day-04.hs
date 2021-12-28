@@ -1,6 +1,8 @@
 -- Advent of code. Day 4.
 
 import Data.List
+import Data.Map (Map, lookup, insert, empty)
+import Data.Maybe (fromJust)
 
 main = do
     f <- readFile "day-04-example.txt"
@@ -20,6 +22,9 @@ main = do
     print (map idx_pair_conv filtered_indices)
     print (map (pair_to_list.idx_pair_conv) filtered_indices)
     print (foldl1 (++) (map (pair_to_list.idx_pair_conv) filtered_indices))
+    let concatd = (foldl1 (++) (map (pair_to_list.idx_pair_conv) filtered_indices))
+    print concatd
+    print (addr_list_to_map concatd)
 
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
@@ -71,3 +76,13 @@ idx_pair_conv (Just x, a)           = (Just (index_to_rc x), a)
 pair_to_list                        :: (Maybe (Int, Int), Int) -> [(String, Int)]
 pair_to_list (Nothing, _)           = []
 pair_to_list (Just (r, c), x)            = [("r" ++ (show r),x), ("c" ++ (show c),x)]
+
+
+update_map_with_addr                :: Map String [Int] -> (String,  Int) -> Map String [Int]
+update_map_with_addr map (k, v)     = Data.Map.insert k nl map
+    where e                         = Data.Map.lookup k map
+          el                        = if e == Nothing then [] else (fromJust e)
+          nl                        = v:el
+
+addr_list_to_map                    :: [(String, Int)] -> Map String [Int]
+addr_list_to_map al                 = foldl update_map_with_addr Data.Map.empty al
