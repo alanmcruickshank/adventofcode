@@ -7,21 +7,14 @@ import Data.Maybe (fromJust)
 main = do
     f <- readFile "day-04-example.txt"
     print "=== Part 1"
-    let sections = split_sections f
-    let call_order = split_comma_seperated (head sections)
-    let cards = Data.List.map process_raw_card (tail sections)
+    let (call_order, cards) = process_file f
     print call_order
     print cards
-    let card_orders = Data.List.map (\x -> call_order_to_indices call_order x) cards
+    let card_orders = card_indices call_order cards
+    print card_orders
     print (Data.List.map card_win card_orders)
-
-card_win                            :: [Maybe Int] -> Maybe (String, Int)
-card_win card_order                 = reduce_map col_row_complete
-    where card_indices              = zip card_order [0..]
-          filtered_indices          = removeif has_null_pos card_indices
-          concatd                   = (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
-          col_row_map               = addr_list_to_map concatd
-          col_row_complete          = Data.Map.map reduce_list col_row_map
+    print (winning_card' (Data.List.map card_win card_orders))
+    -- Found winning card, just need to get index and evaluate score.
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
 split_step                          :: ([String], String, String) -> ([String], String, String)
@@ -95,3 +88,30 @@ reduce_map m                            = foldrWithKey reduce_map' Nothing m
           reduce_map' k a Nothing               = Just (k, (fromJust a))
           reduce_map' k Nothing (Just (kb, b))  = Just (kb, b) 
           reduce_map' k a (Just (kb, b))        = if (fromJust a) < b then Just (k, (fromJust a)) else Just (k, b)
+
+-- Higher level functions.
+
+card_win                            :: [Maybe Int] -> Maybe (String, Int)
+card_win card_order                 = reduce_map col_row_complete
+    where card_indices              = zip card_order [0..]
+          filtered_indices          = removeif has_null_pos card_indices
+          concatd                   = (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
+          col_row_map               = addr_list_to_map concatd
+          col_row_complete          = Data.Map.map reduce_list col_row_map
+
+process_file                        :: String -> ([Int], [[Int]])
+process_file s                      = (call_order, cards)
+    where sections                  = split_sections s
+          call_order                = split_comma_seperated (head sections)
+          cards                     = Data.List.map process_raw_card (tail sections)
+
+card_indices                        :: [Int] -> [[Int]] -> [[Maybe Int]]
+card_indices call_order cards       = Data.List.map (\x -> call_order_to_indices call_order x) cards
+
+winning_card'                       :: [Maybe (String, Int)] -> Maybe (String, Int)
+winning_card' []                    = Nothing
+winning_card' xs                    = foldl winning_fold Nothing xs
+    where winning_fold Nothing Nothing                  = Nothing
+          winning_fold Nothing a                        = a
+          winning_fold a Nothing                        = a
+          winning_fold (Just (ka, va)) (Just (kb, vb))  = if va < vb then Just (ka, va) else Just (kb, vb)
