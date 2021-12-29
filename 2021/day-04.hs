@@ -14,6 +14,9 @@ main = do
     print card_orders
     print (Data.List.map card_win card_orders)
     print (winning_card' (Data.List.map card_win card_orders))
+    print (elemIndex (winning_card' (Data.List.map card_win card_orders)) (Data.List.map card_win card_orders))
+    print (winning_card card_orders)
+    print (winning_score call_order cards)
     -- Found winning card, just need to get index and evaluate score.
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
@@ -115,3 +118,20 @@ winning_card' xs                    = foldl winning_fold Nothing xs
           winning_fold Nothing a                        = a
           winning_fold a Nothing                        = a
           winning_fold (Just (ka, va)) (Just (kb, vb))  = if va < vb then Just (ka, va) else Just (kb, vb)
+
+winning_card                        :: [[Maybe Int]] -> (Int, (String, Int))
+winning_card co                     = (fromJust best_idx, fromJust best_card) -- Slightly risky to just fromJust here.
+    where card_stops                = Data.List.map card_win co
+          best_card                 = winning_card' card_stops
+          best_idx                  = elemIndex best_card card_stops
+
+winning_score                       :: [Int] -> [[Int]] -> (Int, String, [Int], Int, Int, Int)
+winning_score co crds               = (cd_idx, c_rc, uncalled_ns, sum_uncalled, last_called, score)
+    where c_ords                    = card_indices co crds
+          (cd_idx, (c_rc, cl_idx))  = winning_card c_ords
+          called_ns                 = take (cl_idx + 1) co
+          uncalled_ns               = (crds !! cd_idx) \\ called_ns -- list difference
+          sum_uncalled              = sum uncalled_ns
+          last_called               = last called_ns
+          score                     = last_called * sum_uncalled
+
