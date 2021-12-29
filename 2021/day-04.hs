@@ -5,13 +5,13 @@ import Data.Map (Map, lookup, insert, empty, map, foldrWithKey)
 import Data.Maybe (fromJust)
 
 main = do
-    f <- readFile "day-04-example.txt"
+    f <- readFile "day-04-input.txt"
     print "=== Part 1"
     let (call_order, cards) = processFile f
     let answer1 = winning_score call_order cards
     print answer1
 
--- INPUT PROCESSING
+-- ----- INPUT PROCESSING
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
 splitStep                           :: ([String], String, String) -> ([String], String, String)
@@ -41,18 +41,17 @@ processFile s                       = (call_order, cards)
           processRawCard s          = (concat.(Data.List.map ((Data.List.map (\x -> read x::Int)).words)).lines) s
           splitSections s           = extractFirst (splitStep ([], "", s))
 
--- CARD INDEXING
+-- ----- CARD INDEXING
 
 callOrderToIndices                  :: [Int] -> [Int] -> [Maybe Int]
 callOrderToIndices call crd         = Data.List.map (\x -> elemIndex x crd) call
 
+cardIndices                         :: [Int] -> [[Int]] -> [[Maybe Int]]
+cardIndices call_order cards        = Data.List.map (\x -> callOrderToIndices call_order x) cards
+
 removeIf                            :: (a -> Bool) -> [a] -> [a]
 removeIf func []                    = []
 removeIf func (h:t)                 = if func h then removeIf func t else h:(removeIf func t)
-
-hasNullPos                          :: (Maybe Int, Int) -> Bool
-hasNullPos (Nothing, _)             = True
-hasNullPos (a, _)                   = False
 
 idxPairConv                         :: (Maybe Int, Int) -> (Maybe (Int, Int), Int)
 idxPairConv (Nothing, a)            = (Nothing, a)
@@ -94,9 +93,6 @@ cardWin card_order                  = reduceMap col_row_complete
           concatd                   = (foldl1 (++) (Data.List.map (pairToList.idxPairConv) filtered_indices))
           col_row_map               = addrListToMap concatd
           col_row_complete          = Data.Map.map reduceList col_row_map
-
-cardIndices                         :: [Int] -> [[Int]] -> [[Maybe Int]]
-cardIndices call_order cards        = Data.List.map (\x -> callOrderToIndices call_order x) cards
 
 winning_card'                       :: [Maybe (String, Int)] -> Maybe (String, Int)
 winning_card' []                    = Nothing
