@@ -8,32 +8,26 @@ main = do
     f <- readFile "day-04-example.txt"
     print "=== Part 1"
     let (call_order, cards) = process_file f
-    print call_order
-    print cards
-    let card_orders = card_indices call_order cards
-    print card_orders
-    print (Data.List.map card_win card_orders)
-    print (winning_card' (Data.List.map card_win card_orders))
-    print (elemIndex (winning_card' (Data.List.map card_win card_orders)) (Data.List.map card_win card_orders))
-    print (winning_card card_orders)
-    print (winning_score call_order cards)
-    -- Found winning card, just need to get index and evaluate score.
+    let answer1 = winning_score call_order cards
+    print answer1
+
+-- INPUT PROCESSING
 
 -- Use a triplet of ([extracted things], prefix, unprocessed-suffix)
-split_step                          :: ([String], String, String) -> ([String], String, String)
-split_step (a, "", "")              = (a, "", "")
-split_step (a, b, "")               = (a ++ [b], "", "") -- append b to a
-split_step (a, "", '\n':'\n':xs)    = split_step (a, "", xs)
-split_step (a, b, '\n':'\n':xs)     = split_step (a ++ [b], "", xs)
-split_step (a, b, x:xs)             = split_step (a, b ++ [x], xs)
+splitStep                           :: ([String], String, String) -> ([String], String, String)
+splitStep (a, "", "")               = (a, "", "")
+splitStep (a, b, "")                = (a ++ [b], "", "") -- append b to a
+splitStep (a, "", '\n':'\n':xs)     = splitStep (a, "", xs)
+splitStep (a, b, '\n':'\n':xs)      = splitStep (a ++ [b], "", xs)
+splitStep (a, b, x:xs)              = splitStep (a, b ++ [x], xs)
 
-split_sections                      :: String -> [String]
-split_sections s                    = a
-    where (a, _, _)                 = split_step ([], "", s)
+splitSections                       :: String -> [String]
+splitSections s                     = a
+    where (a, _, _)                 = splitStep ([], "", s)
 
 -- Unpack comma seperated string (copying previous pattern)
-split_comma_seperated               :: String -> [Int]
-split_comma_seperated s             = a
+splitCommaSeperated                 :: String -> [Int]
+splitCommaSeperated s               = a
     where (a, _, _)                 = f ([], "", s)
           f (b, "", "")             = (b, "", "")
           f (b, c, "")              = (b ++ [read c::Int], "", "")
@@ -41,34 +35,29 @@ split_comma_seperated s             = a
           f (b, c, ',':xs)          = f (b ++ [read c::Int], "", xs)
           f (b, c, x:xs)            = f (b, c ++ [x], xs)
 
-process_raw_card s                  = (concat.(Data.List.map ((Data.List.map (\x -> read x::Int)).words)).lines) s
+processRawCard s                    = (concat.(Data.List.map ((Data.List.map (\x -> read x::Int)).words)).lines) s
 
--- Given a list of called numbers, evaluate when a card will win, and the score at that point.
+-- CARD INDEXING
 
--- Notes:
---  Need to turn numbers to indices.
-call_order_to_indices               :: [Int] -> [Int] -> [Maybe Int]
-call_order_to_indices call crd      = Data.List.map (\x -> elemIndex x crd) call
+callOrderToIndices                  :: [Int] -> [Int] -> [Maybe Int]
+callOrderToIndices call crd         = Data.List.map (\x -> elemIndex x crd) call
 
-index_to_rc                         :: Int -> (Int, Int)  -- (row, col)
-index_to_rc x                       = (div x 5, mod x 5)
+removeIf                            :: (a -> Bool) -> [a] -> [a]
+removeIf func []                    = []
+removeIf func (h:t)                 = if func h then removeIf func t else h:(removeIf func t)
 
-removeif                            :: (a -> Bool) -> [a] -> [a]
-removeif func []                    = []
-removeif func (h:t)                 = if func h then removeif func t else h:(removeif func t)
+hasNullPos                          :: (Maybe Int, Int) -> Bool
+hasNullPos (Nothing, _)             = True
+hasNullPos (a, _)                   = False
 
-has_null_pos                        :: (Maybe Int, Int) -> Bool
-has_null_pos (Nothing, _)           = True
-has_null_pos (a, _)                 = False
+idxPairConv                         :: (Maybe Int, Int) -> (Maybe (Int, Int), Int)
+idxPairConv (Nothing, a)            = (Nothing, a)
+idxPairConv (Just x, a)             = (Just (indexToRc x), a)
+    where indexToRc x               = (div x 5, mod x 5)  -- (row, col)
 
-idx_pair_conv                       :: (Maybe Int, Int) -> (Maybe (Int, Int), Int)
-idx_pair_conv (Nothing, a)          = (Nothing, a)
-idx_pair_conv (Just x, a)           = (Just (index_to_rc x), a)
-
-pair_to_list                        :: (Maybe (Int, Int), Int) -> [(String, Int)]
-pair_to_list (Nothing, _)           = []
-pair_to_list (Just (r, c), x)            = [("r" ++ (show r),x), ("c" ++ (show c),x)]
-
+pairToList                          :: (Maybe (Int, Int), Int) -> [(String, Int)]
+pairToList (Nothing, _)             = []
+pairToList (Just (r, c), x)         = [("r" ++ (show r),x), ("c" ++ (show c),x)]
 
 update_map_with_addr                :: Map String [Int] -> (String,  Int) -> Map String [Int]
 update_map_with_addr map (k, v)     = Data.Map.insert k nl map
@@ -97,19 +86,19 @@ reduce_map m                            = foldrWithKey reduce_map' Nothing m
 card_win                            :: [Maybe Int] -> Maybe (String, Int)
 card_win card_order                 = reduce_map col_row_complete
     where card_indices              = zip card_order [0..]
-          filtered_indices          = removeif has_null_pos card_indices
-          concatd                   = (foldl1 (++) (Data.List.map (pair_to_list.idx_pair_conv) filtered_indices))
+          filtered_indices          = removeIf (\(x, _) -> x == Nothing) card_indices
+          concatd                   = (foldl1 (++) (Data.List.map (pairToList.idxPairConv) filtered_indices))
           col_row_map               = addr_list_to_map concatd
           col_row_complete          = Data.Map.map reduce_list col_row_map
 
 process_file                        :: String -> ([Int], [[Int]])
 process_file s                      = (call_order, cards)
-    where sections                  = split_sections s
-          call_order                = split_comma_seperated (head sections)
-          cards                     = Data.List.map process_raw_card (tail sections)
+    where sections                  = splitSections s
+          call_order                = splitCommaSeperated (head sections)
+          cards                     = Data.List.map processRawCard (tail sections)
 
 card_indices                        :: [Int] -> [[Int]] -> [[Maybe Int]]
-card_indices call_order cards       = Data.List.map (\x -> call_order_to_indices call_order x) cards
+card_indices call_order cards       = Data.List.map (\x -> callOrderToIndices call_order x) cards
 
 winning_card'                       :: [Maybe (String, Int)] -> Maybe (String, Int)
 winning_card' []                    = Nothing
