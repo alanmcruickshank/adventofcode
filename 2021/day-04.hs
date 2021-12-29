@@ -6,10 +6,12 @@ import Data.Maybe (fromJust)
 
 main = do
     f <- readFile "day-04-input.txt"
-    print "=== Part 1"
     let (call_order, cards) = processFile f
-    let answer1 = winning_score call_order cards
-    print answer1
+    print "=== Part 1"
+    print (answer1 call_order cards)
+    print "=== Part 2"
+    print (answer2 call_order cards)
+
 
 -- ----- INPUT PROCESSING
 
@@ -40,6 +42,7 @@ processFile s                       = (call_order, cards)
           cards                     = Data.List.map processRawCard (tail sections)
           processRawCard s          = (concat.(Data.List.map ((Data.List.map (\x -> read x::Int)).words)).lines) s
           splitSections s           = extractFirst (splitStep ([], "", s))
+
 
 -- ----- CARD INDEXING
 
@@ -84,7 +87,8 @@ reduceMap m                            = foldrWithKey reduceMap' Nothing m
           reduceMap' k Nothing (Just (kb, b))  = Just (kb, b) 
           reduceMap' k a (Just (kb, b))        = if (fromJust a) < b then Just (k, (fromJust a)) else Just (k, b)
 
--- Higher level functions.
+
+-- ----- Higher level functions.
 
 cardWin                             :: [Maybe Int] -> Maybe (String, Int)
 cardWin card_order                  = reduceMap col_row_complete
@@ -94,26 +98,39 @@ cardWin card_order                  = reduceMap col_row_complete
           col_row_map               = addrListToMap concatd
           col_row_complete          = Data.Map.map reduceList col_row_map
 
-winning_card'                       :: [Maybe (String, Int)] -> Maybe (String, Int)
-winning_card' []                    = Nothing
-winning_card' xs                    = foldl winning_fold Nothing xs
-    where winning_fold Nothing Nothing                  = Nothing
-          winning_fold Nothing a                        = a
-          winning_fold a Nothing                        = a
-          winning_fold (Just (ka, va)) (Just (kb, vb))  = if va < vb then Just (ka, va) else Just (kb, vb)
+-- Generic find best or worst card
+cardFold                                    :: (Int -> Int -> Bool) -> Maybe (String, Int) -> Maybe (String, Int) -> Maybe (String, Int)
+cardFold f Nothing Nothing                  = Nothing
+cardFold f Nothing a                        = a
+cardFold f a Nothing                        = a
+cardFold f (Just (ka, va)) (Just (kb, vb))  = if f va vb then Just (ka, va) else Just (kb, vb)
 
-winning_card                        :: [[Maybe Int]] -> (Int, (String, Int))
-winning_card co                     = (fromJust best_idx, fromJust best_card) -- Slightly risky to just fromJust here.
+chooseCard                          :: (Int -> Int -> Bool) -> [[Maybe Int]] -> (Int, (String, Int))
+chooseCard f co                     = (fromJust best_idx, fromJust best_card) -- Slightly risky to just fromJust here.
     where card_stops                = Data.List.map cardWin co
-          best_card                 = winning_card' card_stops
+          best_card                 = choose card_stops
           best_idx                  = elemIndex best_card card_stops
+          choose xs                 = foldl (cardFold f) Nothing xs
 
-winning_score                       :: [Int] -> [[Int]] -> (Int, String, [Int], Int, Int, Int)
-winning_score co crds               = (cd_idx, c_rc, uncalled_ns, sum_uncalled, last_called, score)
-    where c_ords                    = cardIndices co crds
-          (cd_idx, (c_rc, cl_idx))  = winning_card c_ords
-          called_ns                 = take (cl_idx + 1) co
-          uncalled_ns               = (crds !! cd_idx) \\ called_ns -- list difference
+cardScore                           :: [Int] -> Int -> [Int] -> Int
+cardScore co cl_idx crd             = score
+    where called_ns                 = take (cl_idx + 1) co
+          uncalled_ns               = crd \\ called_ns -- list difference
           sum_uncalled              = sum uncalled_ns
           last_called               = last called_ns
           score                     = last_called * sum_uncalled
+
+
+-- ----- Answer Functions
+
+answer1                             :: [Int] -> [[Int]] -> (Int, String, Int)
+answer1 co crds                     = (cd_idx, c_rc, score)
+    where c_ords                    = cardIndices co crds
+          (cd_idx, (c_rc, cl_idx))  = chooseCard (<) c_ords
+          score                     = cardScore co cl_idx (crds !! cd_idx)
+
+answer2                             :: [Int] -> [[Int]] -> (Int, String, Int)
+answer2 co crds                     = (cd_idx, c_rc, score)
+    where c_ords                    = cardIndices co crds
+          (cd_idx, (c_rc, cl_idx))  = chooseCard (>) c_ords
+          score                     = cardScore co cl_idx (crds !! cd_idx)
