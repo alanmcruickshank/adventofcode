@@ -5,7 +5,7 @@ import Data.Map (Map, lookup, insert, empty, map, foldrWithKey)
 import Data.Maybe (fromJust)
 
 main = do
-    f <- readFile "day-05-example.txt"
+    f <- readFile "day-05-input.txt"
     let l = extractLines f
     putStrLn "=== Part 1"
     print (answer1 l)
@@ -25,14 +25,13 @@ processLine                 :: String -> IntLine
 processLine s               = (processPair first_pair, processPair second_pair)
     where idx               = fromJust (elemIndex '-' s)
           first_pair        = take (idx - 1) s
-          second_pair       = drop ((length s) - (idx - 1)) s
+          second_pair       = drop (idx + 3) s
 
 processPair                 :: String -> IntPoint
 processPair s               = (read first::Int, read second::Int)
     where idx               = fromJust (elemIndex ',' s)
           first             = take idx s
-          second            = drop ((length s) - idx) s
-
+          second            = drop (idx + 1) s
 
 -- ----- Line Functions
 
