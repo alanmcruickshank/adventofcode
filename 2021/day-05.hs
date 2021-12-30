@@ -1,4 +1,4 @@
--- Advent of code. Day 4.
+-- Advent of code. Day 5.
 
 import Data.List
 import Data.Map (Map, lookup, insert, empty, map, foldrWithKey)
