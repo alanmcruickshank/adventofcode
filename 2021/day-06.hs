@@ -10,6 +10,8 @@ main = do
     putStrLn "=== Part 1"
     putStrLn ("Day 18: " ++ (show (fishAt fish 18)))
     putStrLn ("Day 80: " ++ (show (fishAt fish 80)))
+    putStrLn "=== Part 2"
+    putStrLn ("Day 256: " ++ (show (fishAt fish 256)))
 
 
 -- Count fish at each lifestage
