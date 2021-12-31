@@ -7,11 +7,11 @@ import qualified Data.Map as Map
 main = do
     f <- readFile "day-07-input.txt"
     let crabs = (summariseCrabs.parseOnCommas) f
+    let estimate = estMean crabs -- Estimate a starting point using simple arithmetic mean
     putStrLn "=== Part 1"
-    --print crabs
-    let estimate = estMean crabs
-    print estimate
-    print (search estimate crabs)
+    print (search estimate fuelToPos1 crabs)
+    putStrLn "=== Part 2"
+    print (search estimate fuelToPos2 crabs)
 
 -- ----- File Processing
 
@@ -31,10 +31,18 @@ summariseCrabs (x:xs)   = Map.insert x n m
     where m             = summariseCrabs xs
           n             = (coalesce (Map.lookup x m) 0) + 1
 
-fuelToPos               :: Int -> Map.Map Int Int -> Int
-fuelToPos p m           = Map.foldrWithKey f 0 m
+fuelToPos1              :: Int -> Map.Map Int Int -> Int
+fuelToPos1 p m          = Map.foldrWithKey f 0 m
     where f             :: Int -> Int -> Int -> Int
-          f k v s       = ((abs (p - k)) * v) + s
+          f k v s       = (d * v) + s
+            where d     = abs (p - k)
+
+fuelToPos2              :: Int -> Map.Map Int Int -> Int
+fuelToPos2 p m          = Map.foldrWithKey f 0 m
+    where f             :: Int -> Int -> Int -> Int
+          f k v s       = (df * v) + s
+            where df    = sum [0..d]
+                  d     = abs (p - k)
 
 grad                        :: Int -> Int -> Int -> Int
 grad a b c
@@ -47,14 +55,14 @@ estMean c               = div (Map.foldrWithKey fs 0 c) (Map.foldr fv 0 c)
     where fs k v s      = s + (k * v)
           fv v s        = s + v
 
-search                  :: Int -> Map.Map Int Int -> (Int, Int)
-search start crabs      = (p, fromJust (Map.lookup p c))
+search                      :: Int -> (Int -> Map.Map Int Int -> Int) -> Map.Map Int Int -> (Int, Int)
+search start fuelFunc crabs = (p, fromJust (Map.lookup p c))
     where (p, c, d)     = until (\(_,_,x) -> x == 1) f (start, Map.empty, 0)
           f             :: (Int, Map.Map Int Int, Int) -> (Int, Map.Map Int Int, Int)
           f (pn, cn, dn)
-            | isNothing (Map.lookup pn cn)              = (pn, Map.insert pn (fuelToPos pn crabs) cn, dn)                   -- Cache Fail on current pos
-            | isNothing (Map.lookup (pn + 1) cn)        = (pn, Map.insert (pn + 1) (fuelToPos (pn + 1) crabs) cn, dn)       -- Cache Fail on +1
-            | isNothing (Map.lookup (pn - 1) cn)        = (pn, Map.insert (pn - 1) (fuelToPos (pn - 1) crabs) cn, dn)       -- Cache Fail on -1
+            | isNothing (Map.lookup pn cn)              = (pn, Map.insert pn (fuelFunc pn crabs) cn, dn)                   -- Cache Fail on current pos
+            | isNothing (Map.lookup (pn + 1) cn)        = (pn, Map.insert (pn + 1) (fuelFunc (pn + 1) crabs) cn, dn)       -- Cache Fail on +1
+            | isNothing (Map.lookup (pn - 1) cn)        = (pn, Map.insert (pn - 1) (fuelFunc (pn - 1) crabs) cn, dn)       -- Cache Fail on -1
             | g == 0                                    = (pn, cn, 1)                                                       -- Done
             | g == (-1)                                 = (pn - 1, cn, 0)                                                   -- Move Down
             | g == 1                                    = (pn + 1, cn, 0)                                                   -- Move Down
