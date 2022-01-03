@@ -1,25 +1,17 @@
 -- Advent of code. Day 9.
 
 import Data.Maybe (fromJust, isNothing, isJust)
-import Data.List (elemIndex, find, (\\), intersect, sort, transpose)
+import Data.List (elemIndex, find, (\\), intersect, sort, transpose, sortOn )
 import Data.Char (digitToInt)
 import qualified Data.Map as Map 
 
 main = do
-    f <- readFile "day-09-example.txt"
+    f <- readFile "day-09-input.txt"
     let i = parseInput f
     putStrLn "=== Part 1"
     print (answer1 i)
     putStrLn "=== Part 2"
-    let a2a = basinBasis i
-    print (basins a2a)
-    let a2b = stepBasin a2a
-    print (basins a2b)
-    let a2n = iterBasins a2b
-    print (basins a2n)
-    print (countVals (basins a2n))
-    
-    --print (answer2 i)
+    print (answer2 i)  -- A little slow? But works.
 
 -- ----- File Processing
 
@@ -68,13 +60,12 @@ riskLevel (m, _)            = if is_low then c + 1 else 0
           adjs              = [u, d, l, r]
           is_low            = foldl1 (&&) (map (> c) adjs)
 
--- ----- File Processing
+-- ----- Answer 1
 
 answer1                     :: GridMap -> Int
 answer1 i                   = sum (map riskLevel (gridWindows i))
 
-answer2                     :: GridMap -> Map.Map GridPoint GridPointScore
-answer2 i                   = stepBasin (basinBasis i)
+-- ----- Answer 2
 
 basinBasis                  :: GridMap -> Map.Map GridPoint GridPointScore
 basinBasis i                = m
@@ -116,3 +107,10 @@ iterBasins m
 
 countVals                   :: Ord a => [a] -> Map.Map a Int
 countVals xs                = Map.fromListWith (+) (zip xs (repeat 1))
+
+answer2                     :: GridMap -> Int
+answer2 i                   = foldl1 (*) s3                                     -- Multiply the sizes of the largest three
+    where r                 = (countVals.basins.iterBasins.basinBasis) i        -- Map the basins
+          t3                = ((take 3).reverse.(sortOn snd)) (Map.toList r)    -- Get the largest three
+          s3                = map snd t3                                        -- Get the sizes of the largest three
+          
