@@ -11,14 +11,22 @@ main = do
     putStrLn "=== Part 1"
     print (answer1 i)
     putStrLn "=== Part 2"
-    print (answer2 i)
+    let a2a = basinBasis i
+    print (basins a2a)
+    let a2b = stepBasin a2a
+    print (basins a2b)
+    let a2n = iterBasins a2b
+    print (basins a2n)
+    print (countVals (basins a2n))
+    
+    --print (answer2 i)
 
 -- ----- File Processing
 
 type GridPoint              = (Int, Int)                -- x/y 
 type GridMap                = ([[Int]], (Int, Int))     -- width/height
 type GridSquare             = ([[Int]], GridPoint)
-type GridPointScore         = (GridSquare, Int, Int, Maybe GridPoint)
+type GridPointScore         = (GridSquare, Int, Int, Maybe GridPoint)   -- square, height, risk, basin
 
 
 parseInput      :: String -> GridMap
@@ -76,6 +84,35 @@ basinBasis i                = m
             where r         = riskLevel (m, p)
                   c         = (m !! 1) !! 1
 
+adjacents                   :: GridPoint -> [GridPoint]
+adjacents (x, y)            = [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
+
 stepBasin                   :: Map.Map GridPoint GridPointScore ->  Map.Map GridPoint GridPointScore
-stepBasin m                 = assigned -- m'
+stepBasin m                 = Map.map update m
     where assigned          = Map.filter (\(_, _, _, p) -> isJust p) m
+          update            :: GridPointScore -> GridPointScore
+          update (g, c, r, p)
+              | isJust p            = (g, c, r, p)  -- Already sorted
+              | c == 9              = (g, c, r, p)  -- It's a ridge
+              | length src == 0     = (g, c, r, p)  -- No already assigned neighbour - pass for now
+              | otherwise           = (g, c, r, p')
+              where (_, k)          = g 
+                    a               = adjacents k
+                    s               = Map.keys assigned
+                    src             = intersect a s
+                    (_, _, _, p')   = fromJust (Map.lookup (src !! 0) m)
+
+basins                          :: Map.Map GridPoint GridPointScore -> [GridPoint]
+basins m                        = foldl1 (++) (((map f).Map.toList) m)
+    where f (_, (_, _, _, p))   = if isNothing p then [] else [fromJust p]
+
+iterBasins                  :: Map.Map GridPoint GridPointScore ->  Map.Map GridPoint GridPointScore
+iterBasins m
+    | b == b'               = m                 -- stop iterating
+    | otherwise             = iterBasins m'     -- iterate
+    where m'                = stepBasin m
+          b                 = basins m
+          b'                = basins m'
+
+countVals                   :: Ord a => [a] -> Map.Map a Int
+countVals xs                = Map.fromListWith (+) (zip xs (repeat 1))
