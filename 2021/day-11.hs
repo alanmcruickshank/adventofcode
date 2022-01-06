@@ -12,7 +12,8 @@ main = do
     putStrLn "=== Part 1"
     print i
     print (incrGrid i)
-    print (detectFlashes (incrGrid i))
+    print (flashGrid (incrGrid i))
+    print (shiftGrid 0 2 2 (flashGrid (incrGrid i)))
 
 
 type OctoGrid       = [[Int]]
@@ -21,17 +22,27 @@ type GridPoint      = (Int, Int)
 parseFile           :: String -> OctoGrid
 parseFile f         =  ((map (map digitToInt)).lines) f
 
+mapGrid             :: (Int -> Int) -> OctoGrid -> OctoGrid
+mapGrid f g         = (map (map f)) g
+
 incrGrid            :: OctoGrid -> OctoGrid
-incrGrid g          = (map (map (+1))) g
+incrGrid g          = mapGrid (+1) g
 
-detectFlashes       :: OctoGrid -> [GridPoint]
-detectFlashes g     = foldl1 (++) (map genPoints g')
-    where g'        = zip (map dFlashRow g) [0..]
-          genPoints         :: ([Int], Int) -> [GridPoint]
-          genPoints (xs, y) = zip xs (repeat y)
+width               :: OctoGrid -> Int
+width g             = length (g !! 0)
 
-dFlashRow           :: [Int] -> [Int]  -- GridRow to list of row indices
-dFlashRow r         = map snd f
-    where r'        = zip r [0..]
-          f         = filter ((>= 9).fst) r'
+height              :: OctoGrid -> Int
+height g            = length g
 
+shiftGrid           :: Int -> Int -> Int -> OctoGrid -> OctoGrid
+shiftGrid f x y g   = r_pfx ++ g'2 ++ r_sfx
+    where g'1       = map (\r -> c_pfx ++ (take ((width g) - x) (drop (-x) r)) ++ c_sfx) g
+          g'2       = take ((height g) - y) (drop (-y) g'1)                 -- trim rows
+          c_pfx     = if x < 1 then [] else take x $ repeat f
+          c_sfx     = if x > -1 then [] else take (-x) $ repeat f
+          r_pfx     = if y < 1 then [] else take y $ repeat blank_r         -- flex my $
+          r_sfx     = if y > -1 then [] else take (-y) $ repeat blank_r     -- flex my $
+          blank_r   = take (width g) (repeat f)
+
+flashGrid           :: OctoGrid -> OctoGrid -- (1s where there is a flash, 0 otherwise)
+flashGrid g         = mapGrid (\x -> if x >= 9 then 1 else 0) g
