@@ -9,14 +9,16 @@ import Data.Char (digitToInt)
 main = do
     f <- readFile "day-11-input.txt"
     let i = parseFile f
-    putStrLn "=== Part 1: Day 100"
-    let iN = simAt 100 i
-    print (snd iN)
+    putStrLn "=== Part 1"
+    print (answer1 i)
+    putStrLn "=== Part 2"
+    print (answer2 i)
 
 
 type OctoGrid       = [[Int]]
 type GridPoint      = (Int, Int)
 type FlashCache     = (OctoGrid, OctoGrid) -- Grid, Flashes So Far
+type SimRecord      = (OctoGrid, Int, Int) -- Grid, N flashes, N steps
 
 
 parseFile           :: String -> OctoGrid
@@ -83,10 +85,13 @@ doFlash g           = (g2, gridSum f1)
     where (g1, f1)  = iterFlash (g, emptyGridLike g)
           g2        = gridOp (\a b -> if b >= 1 then 0 else a) g1 f1    -- Reset flashed octos to 0
 
-simStep             :: (OctoGrid, Int) -> (OctoGrid, Int)
-simStep (g, n)      = (g2, n + dn)
+simStep             :: SimRecord -> SimRecord
+simStep (g, n, d)      = (g2, n + dn, d + 1)
     where g1        = incrGrid g
           (g2, dn)  = doFlash g1
 
-simAt               :: Int -> OctoGrid -> (OctoGrid, Int)
-simAt d g           = (iterate simStep (g, 0)) !! d
+answer1             :: OctoGrid -> SimRecord
+answer1 g           = (iterate simStep (g, 0, 0)) !! 100
+
+answer2             :: OctoGrid -> SimRecord
+answer2 g           = until (\(gn, _, _) -> (gridSum gn) == 0) simStep (g, 0, 0)  -- We know they've all flashed when the grid sum resets to zero
