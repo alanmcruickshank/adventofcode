@@ -7,18 +7,36 @@ use std::io::{self, BufRead};
 use std::path::Path;
 
 fn main() {
+    let mut idx = 0;
     let mut running_score = 0;
+    let mut group_score = 0;
+    let mut group = Vec::with_capacity(3);
 
     // File input must exist in current path before this produces output
     if let Ok(lines) = read_lines("input.txt") {
         for line in lines {
             if let Ok(line_text) = line {
-                running_score += score_line(line_text)
+                // Convert to bytes first.
+                let b = line_text.into_bytes();
+
+                running_score += score_line(&b);
+
+                group.push(b);
+
+                if idx % 3 == 2 {
+                    // Process vector.
+                    group_score += priority(find_common(&group[0], &group[1], &group[2]));
+                    // clear the vector going forward
+                    group.clear();
+                }
+
+                idx += 1;
             }
         }
     }
 
     println!("Final Priority Sum: {:?}", running_score);
+    println!("Final Group Sum: {:?}", group_score);
 
 }
 
@@ -31,11 +49,9 @@ where P: AsRef<Path>, {
 }
 
 // Score a line
-fn score_line(line: String) -> i64 {
-    // Convert to bytes first.
-    let b = line.as_bytes();
+fn score_line(line: &[u8]) -> i64 {
     // Line is actually two strings, first divide.
-    let (first, last) = b.split_at(line.len() / 2);
+    let (first, last) = line.split_at(line.len() / 2);
     //println!("First: {:?}, Last: {:?}", first, last);
 
     let mut priority_sum = 0;
@@ -79,4 +95,28 @@ fn priority(i: u8) -> i64 {
     } else {
         return (i - 96) as i64
     }
+}
+
+fn find_common(a: &Vec<u8>, b: &Vec<u8>, c: &Vec<u8>) -> u8 {
+    // For each value in a
+    for p in a.iter() {
+
+        let mut in_b = false;
+        for q in b.iter() {
+            if p == q {
+                in_b = true;
+                break
+            }
+        }
+
+        if in_b {
+            for r in c.iter() {
+                if r == p {
+                    return *r
+                }
+            }
+        }
+    }
+
+    return 0
 }
