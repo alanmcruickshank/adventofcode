@@ -37,15 +37,15 @@ fn score_line(line: String) -> i64 {
     // concise to enumerate options for scoring.
     // Looking at the numbers, there's probably a mathematical way.
     let outcomes = HashMap::from([
-        ("A X", 1 + 3),
-        ("A Y", 2 + 6),
-        ("A Z", 3 + 0),
-        ("B X", 1 + 0),
-        ("B Y", 2 + 3),
-        ("B Z", 3 + 6),
-        ("C X", 1 + 6),
-        ("C Y", 2 + 0),
-        ("C Z", 3 + 3),
+        ("A X", 3),  // part 1: 1 + 3 = 4, part 2: lose with S: 3 + 0 = 3
+        ("A Y", 4),  // part 1: 2 + 6 = 8, part 2: draw with R: 1 + 3 = 4
+        ("A Z", 8),  // part 1: 3 + 0 = 3, part 2: win with P: 2 + 6 = 8
+        ("B X", 1),  // part 1: 1 + 0 = 1, part 2: lose with R: 1 + 0 = 1
+        ("B Y", 5),  // part 1: 2 + 3 = 5, part 2: draw with P: 2 + 3 = 5
+        ("B Z", 9),  // part 1: 3 + 6 = 9, part 2: win with S: 3 + 6 = 9
+        ("C X", 2),  // part 1: 1 + 6 = 7, part 2: lose with P: 2 + 0 = 2
+        ("C Y", 6),  // part 1: 2 + 0 = 2, part 2: draw with S: 3 + 3 = 6
+        ("C Z", 7),  // part 2: 3 + 3 = 6, part 2: win with R: 1 + 6 = 7
     ]);
 
     match outcomes.get(&line as &str) {
