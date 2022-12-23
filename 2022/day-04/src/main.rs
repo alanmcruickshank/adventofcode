@@ -38,7 +38,7 @@ impl FromStr for ElfAssignment {
 }
 
 
-fn is_fully_contained(a: ElfAssignment) -> bool {
+fn is_fully_contained(a: &ElfAssignment) -> bool {
     // need to check both directions.
     // a contains b
     return (a.a1 <= a.b1 && a.a2 >= a.b2)
@@ -47,8 +47,18 @@ fn is_fully_contained(a: ElfAssignment) -> bool {
 }
 
 
+fn is_overlap(a: &ElfAssignment) -> bool {
+    // overlap is just no gap.
+    // Either: a starts lower than b ends, but middle crosses
+    return (a.a1 <= a.b2 && a.a2 >= a.b1)
+    // or b starts lower than a ends, but middle crosses
+        || (a.b1 < a.a2 && a.b2 >= a.a1)
+}
+
+
 fn main() {
-    let mut running_score = 0;
+    let mut contained_score = 0;
+    let mut overlap_score = 0;
 
     // File input must exist in current path before this produces output
     if let Ok(lines) = read_lines("input.txt") {
@@ -57,17 +67,20 @@ fn main() {
                 // Convert to assignment. (Proceeding if successful)
                 if let Ok(assignment) = ElfAssignment::from_str(&line_text) {
                     // Check containment
-                    let contained = is_fully_contained(assignment);
-                    // Assign score
-                    if contained {
-                        running_score += 1;
+                    if is_overlap(&assignment) {
+                        overlap_score += 1;
+                        // Check containment
+                        if is_fully_contained(&assignment) {
+                            contained_score += 1;
+                        }
                     }
                 }
             }
         }
     }
 
-    println!("Final Count: {:?}", running_score);
+    println!("Contained Count: {:?}", contained_score);
+    println!("Overlap Count: {:?}", overlap_score);
 
 }
 
